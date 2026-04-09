@@ -2,8 +2,10 @@
     // ==========================================
     // CHAT CONFIGURATION
     // ==========================================
-    // Use existing API_BASE_URL if defined, otherwise default to local
-    const base_url = window.API_BASE_URL || 'http://127.0.0.1:5000';
+    const BACKEND_ORIGINS = ['http://127.0.0.1:5000', 'http://localhost:5000'];
+    const base_url = BACKEND_ORIGINS.includes(window.location.origin)
+        ? '' // Same origin
+        : 'http://127.0.0.1:5000'; // External origin
 
     const floatingChatBtn = document.getElementById('floatingChatBtn');
     const chatWidget = document.getElementById('chatWidget');
