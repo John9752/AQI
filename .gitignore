@@ -1,0 +1,18 @@
+# Environment Variables
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+
+# Database
+aqi_assistant.db
+
+# OS Files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - AQInsight</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Firebase Authentication SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+</head>
+<body class="dashboard-page">
+    <nav class="navbar">
+        <div class="logo">🌬️ AQInsight</div>
+        <div class="nav-links">
+            <a href="index.html">Dashboard</a>
+            <a href="health-advice.html">Health Advice</a>
+            <a href="profile.html" class="active">Profile</a>
+            <button id="logoutBtn" class="btn-outline">Logout</button>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div id="alertContainer" class="alert-container"></div>
+        
+        <header class="dashboard-header" style="justify-content: center; text-align: center;">
+            <div>
+                <h1>Your Profile Context</h1>
+                <p>Customize your AI predictions and set emergency health thresholds.</p>
+            </div>
+        </header>
+
+        <div class="dashboard-grid" style="grid-template-columns: 1fr; max-width: 800px; margin: 0 auto;">
+            <!-- Authentication Info Section -->
+            <section class="card profile-card" style="margin-bottom: 20px;">
+                <h2 style="margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px;">Account Details</h2>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; color: #94a3b8;">Registered Name</label>
+                    <input type="text" id="profileName" disabled class="glass-input" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2) !important; color: #64748b; cursor: not-allowed; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;">
+                </div>
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 5px; color: #94a3b8;">Email Address</label>
+                    <input type="email" id="profileEmail" disabled class="glass-input" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2) !important; color: #64748b; cursor: not-allowed; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;">
+                </div>
+            </section>
+
+            <!-- Preferences Section -->
+            <section class="card profile-card">
+                <h2 style="margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px;">Monitoring Settings</h2>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 5px; color: #e2e8f0;">Default Prediction City <span style="color:#ef4444">*</span></label>
+                    <p class="small-text" style="color: #94a3b8; margin-bottom: 10px;">Select the primary location your background AI algorithms should track and send alerts for.</p>
+                    <input type="text" id="profileCity" class="glass-input" placeholder="e.g. Los Angeles" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px;">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 30px;">
+                    <label style="display: block; margin-bottom: 5px; color: #e2e8f0;">Danger Threshold</label>
+                    <p class="small-text" style="color: #94a3b8; margin-bottom: 10px;">Send me a critical email alert when the AQI exceeds this number.</p>
+                    <input type="number" id="profileThreshold" class="glass-input" value="101" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px;">
+                </div>
+
+                <button id="saveProfileBtn" class="btn-primary" style="width: 100%; padding: 15px; font-size: 1.1rem; border-radius: 8px;">Sync Preferences to Database</button>
+            </section>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="auth.js"></script>
+    <script src="profile.js"></script>
+</body>
+</html>

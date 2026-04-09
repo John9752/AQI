@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Personal AQI Health Assistant</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="logo">🌬️ AQInsight</div>
+            <h2>Welcome Back</h2>
+            <p>Log in to your account</p>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" required placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required placeholder="Enter your password">
+                </div>
+                <div id="authError" class="error-message"></div>
+                <button type="submit" class="btn-primary full-width">Log In</button>
+            </form>
+            <p class="auth-link">Don't have an account? <a href="signup.html">Sign Up</a></p>
+        </div>
+    </div>
+    <script src="auth.js"></script>
+</body>
+</html>

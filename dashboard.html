@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Dashboard - AQI Assistant</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="dashboard-page">
+    <nav class="navbar">
+        <div class="logo">🌬️ AQInsight Pro</div>
+        <div class="nav-links">
+            <a href="dashboard.html" class="active">Dashboard</a>
+            <a href="health-advice.html">Health Portal</a>
+            <a href="profile.html">Profile</a>
+            <button id="logoutBtn" class="btn-outline">Logout</button>
+        </div>
+    </nav>
+
+    <main class="container">
+        <header class="dashboard-header">
+            <div>
+                <h1>Environmental Intelligence</h1>
+                <p>Advanced real-time air quality monitoring and analytics</p>
+            </div>
+            <div class="search-box">
+                <input type="text" id="cityInput" placeholder="Enter city name...">
+                <button id="searchBtn" class="btn-primary">Analyze</button>
+            </div>
+        </header>
+
+        <!-- Dynamic Alerts Container -->
+        <div id="alertContainer" class="alert-container"></div>
+
+        <div class="dashboard-grid-pro">
+            <!-- Current Status Column -->
+            <div class="status-column">
+                <section class="card status-card">
+                    <h2 class="card-title">Live Status</h2>
+                    <h3 id="cityNameDisplay">Detecting...</h3>
+                    <div class="aqi-meter">
+                        <div class="aqi-circle" id="aqiCircle">
+                            <span id="aqiValue">--</span>
+                            <span class="aqi-label">AQI</span>
+                        </div>
+                    </div>
+                    <div class="aqi-status" id="aqiStatus">Standby</div>
+                    <p id="healthRecommendation" class="health-rec">Searching for local data...</p>
+                </section>
+
+                <!-- Subscription Card -->
+                <section class="card subscribe-card">
+                    <h2 class="card-title">Email Notifications</h2>
+                    <p class="small-text">Get alerted when AQI exceeds unhealthy levels.</p>
+                    <div class="sub-form">
+                        <input type="email" id="subEmail" placeholder="Enter your email">
+                        <button id="subscribeBtn" class="btn-secondary">Enable Alerts</button>
+                    </div>
+                </section>
+
+                <!-- AI Prediction Card -->
+                <section class="card predict-card" style="margin-top: 1rem;">
+                    <h2 class="card-title">🤖 AI Prediction</h2>
+                    <p class="small-text">Forecasted AQI based on ML Regressor</p>
+                    <div class="prediction-display" style="text-align: center; margin-top: 15px;">
+                        <span id="aiPredictionValue" style="font-size: 2rem; font-weight: bold; color: #3b82f6;">--</span>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Visualization Main Area -->
+            <div class="main-stats">
+                <section class="card chart-card wide">
+                    <h2 class="card-title">Weekly AQI Trend</h2>
+                    <div class="chart-wrapper">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </section>
+                
+                <div class="sub-grid">
+                    <section class="card chart-card">
+                        <h2 class="card-title">Pollutants Breakdown</h2>
+                        <div class="chart-wrapper">
+                            <canvas id="pollutantsChart"></canvas>
+                        </div>
+                    </section>
+                    
+                    <section class="card chart-card">
+                        <h2 class="card-title">Hourly Variance</h2>
+                        <div class="chart-wrapper">
+                            <canvas id="areaChart"></canvas>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="dashboard-footer">
+        <p>© 2026 AQInsight Pro | Powered by AI Regression Models</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="charts.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Advice - Personal AQI Health Assistant</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">🌬️ AQInsight</div>
+        <div class="nav-links">
+            <a href="index.html">Dashboard</a>
+            <a href="health-advice.html" class="active">Health Advice</a>
+            <button id="logoutBtn" class="btn-outline">Logout</button>
+        </div>
+    </nav>
+
+    <main class="container">
+        <header class="dashboard-header">
+            <div>
+                <h1>Understanding Air Quality</h1>
+                <p>Comprehensive guide to AQI levels and recommendations</p>
+            </div>
+        </header>
+
+        <div class="advice-grid">
+            <article class="card category-good">
+                <div class="advice-header">
+                    <div class="aqi-range">0 - 50</div>
+                    <h2>Good</h2>
+                </div>
+                <p>Air quality is considered satisfactory, and air pollution poses little or no risk.</p>
+                <ul>
+                    <li>✅ Great day for outdoor activities.</li>
+                    <li>✅ Open windows to ventilate your home.</li>
+                </ul>
+            </article>
+
+            <article class="card category-moderate">
+                <div class="advice-header">
+                    <div class="aqi-range">51 - 100</div>
+                    <h2>Moderate</h2>
+                </div>
+                <p>Air quality is acceptable; however, there may be a risk for some people, particularly those who are unusually sensitive to air pollution.</p>
+                <ul>
+                    <li>⚠️ Unusually sensitive individuals should consider limiting prolonged outdoor exertion.</li>
+                </ul>
+            </article>
+
+            <article class="card category-unhealthy-sensitive">
+                <div class="advice-header">
+                    <div class="aqi-range">101 - 150</div>
+                    <h2>Unhealthy for Sensitive Groups</h2>
+                </div>
+                <p>Members of sensitive groups may experience health effects. The general public is less likely to be affected.</p>
+                <ul>
+                    <li>❌ Active children and adults, and people with respiratory disease, such as asthma, should limit prolonged outdoor exertion.</li>
+                </ul>
+            </article>
+
+            <article class="card category-unhealthy">
+                <div class="advice-header">
+                    <div class="aqi-range">151 - 200</div>
+                    <h2>Unhealthy</h2>
+                </div>
+                <p>Some members of the general public may experience health effects; members of sensitive groups may experience more serious health effects.</p>
+                <ul>
+                    <li>❌ Everyone should begin to limit prolonged outdoor exertion.</li>
+                    <li>😷 Wear an N95 mask if you must go outside.</li>
+                </ul>
+            </article>
+
+            <article class="card category-very-unhealthy">
+                <div class="advice-header">
+                    <div class="aqi-range">201 - 300</div>
+                    <h2>Very Unhealthy</h2>
+                </div>
+                <p>Health alert: The risk of health effects is increased for everyone.</p>
+                <ul>
+                    <li>🚫 Avoid all outdoor physical activities.</li>
+                    <li>🏠 Keep windows closed and use an air purifier.</li>
+                </ul>
+            </article>
+
+            <article class="card category-hazardous">
+                <div class="advice-header">
+                    <div class="aqi-range">301+</div>
+                    <h2>Hazardous</h2>
+                </div>
+                <p>Health warning of emergency conditions: everyone is more likely to be affected.</p>
+                <ul>
+                    <li>🚫 Remain indoors and keep activity levels low.</li>
+                    <li>🚪 Do not rely on dust masks for protection.</li>
+                </ul>
+            </article>
+        </div>
+    </main>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="auth.js"></script>
+</body>
+</html>
