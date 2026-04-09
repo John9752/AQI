@@ -275,9 +275,11 @@ body {
 
 .map-card {
     grid-area: map;
-    padding: 20px;
+    padding: 24px;
     display: flex;
     flex-direction: column;
+    min-height: 480px;
+    background: rgba(30, 41, 59, 0.4);
 }
 
 .pollutants-card {

@@ -4,6 +4,7 @@ import threading
 import time
 import os
 import sys
+import requests
 
 # Import our new modules
 import database
@@ -202,6 +203,58 @@ def get_historical_aqi():
         return jsonify({"error": "City is required"}), 400
     trends = database.get_aqi_trends(city)
     return jsonify({"city": city, "history": trends})
+
+@app.route('/chat', methods=['POST'])
+def chat_proxy():
+    """Secure Proxy for Gemini API to prevent key leaks."""
+    user_data = request.json
+    user_message = user_data.get('message', '')
+    context = user_data.get('context', {})
+    
+    api_key = os.getenv('GEMINI_API_KEY')
+    if not api_key:
+        return jsonify({"error": "Gemini API Key missing on server environment."}), 500
+
+    # Model attempts
+    models = [
+        'gemini-2.0-flash',
+        'gemini-1.5-flash',
+        'gemini-pro'
+    ]
+
+    system_context = "You are an expert AI Health Assistant. Concise answers (3 sentences). "
+    if context.get('city'):
+        system_context += f"City: {context['city']}, AQI: {context['aqi']} ({context.get('status', 'Unknown')}). Advice based on this."
+    else:
+        system_context += "Give general air quality health advice."
+
+    full_prompt = f"{system_context}\n\nUser Question: {user_message}"
+    
+    last_error = "None"
+    for model in models:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+            payload = {
+                "contents": [{
+                    "parts": [{"text": full_prompt}]
+                }]
+            }
+            response = requests.post(url, json=payload, timeout=10)
+            data = response.json()
+
+            if response.status_code == 200 and 'candidates' in data:
+                return jsonify({
+                    "response": data['candidates'][0]['content']['parts'][0]['text'],
+                    "model_used": model
+                })
+            else:
+                last_error = data.get('error', {}).get('message', 'Unknown Error')
+                print(f"[ChatProxy] Model {model} failed: {last_error}")
+        except Exception as e:
+            last_error = str(e)
+            print(f"[ChatProxy] Fetch error for {model}: {e}")
+
+    return jsonify({"error": "All AI models failed to respond.", "details": last_error}), 500
 
 if __name__ == "__main__":
     print("Backend API server starting on port 5000...")

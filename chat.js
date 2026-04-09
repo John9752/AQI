@@ -1,7 +1,7 @@
 // ==========================================
-// GEMINI API CONFIGURATION
+// CHAT CONFIGURATION
 // ==========================================
-const GEMINI_API_KEY = "AIzaSyDeUsCJVDdDVJxJjaIXzVhmD-802FxRmmA";
+const API_BASE_URL = 'http://127.0.0.1:5000';
 
 const floatingChatBtn = document.getElementById('floatingChatBtn');
 const chatWidget = document.getElementById('chatWidget');
@@ -64,57 +64,37 @@ async function handleSendMessage() {
     appendMessage(text, 'user');
     chatInput.value = '';
 
-    if (!GEMINI_API_KEY || GEMINI_API_KEY === "YOUR_GEMINI_API_KEY") {
-        appendMessage('⚠️ Error: Please insert a valid key.', 'ai');
-        return;
-    }
-
     showTypingIndicator();
 
-    // UPDATED: Using models that are confirmed available on your specific API Key
-    const attempts = [
-        { v: 'v1beta', m: 'gemini-2.0-flash' },
-        { v: 'v1beta', m: 'gemini-flash-latest' },
-        { v: 'v1beta', m: 'gemini-3-flash-preview' }
-    ];
+    try {
+        const appContext = window.appContext || {};
+        const response = await fetch(`${API_BASE_URL}/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                message: text,
+                context: {
+                    city: appContext.city,
+                    aqi: appContext.aqiSimulated,
+                    status: appContext.status
+                }
+            })
+        });
 
-    let fullErrorLog = "";
+        const data = await response.json();
 
-    for (const attempt of attempts) {
-        try {
-            const context = window.appContext;
-            let systemContext = `You are an expert AI Health Assistant. Concise answers (3 sentences). `;
-            if (context && context.city) {
-                systemContext += `City: ${context.city}, AQI: ${context.aqiSimulated} (${context.status}). Advice based on this.`;
-            } else {
-                systemContext += `Give general air quality advice.`;
-            }
+        removeTypingIndicator();
 
-            const prompt = `${systemContext}\n\nUser Question: ${text}`;
-            const url = `https://generativelanguage.googleapis.com/${attempt.v}/models/${attempt.m}:generateContent?key=${GEMINI_API_KEY}`;
-            
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-            });
-
-            const data = await response.json();
-
-            if (response.status === 200 && data.candidates && data.candidates.length > 0) {
-                removeTypingIndicator();
-                appendMessage(data.candidates[0].content.parts[0].text, 'ai');
-                return;
-            } else {
-                fullErrorLog += `[${attempt.m}]: ${data.error ? data.error.message : "Error"}\n`;
-            }
-        } catch (e) {
-            fullErrorLog += `[${attempt.m}]: Fetch error\n`;
+        if (response.ok && data.response) {
+            appendMessage(data.response, 'ai');
+        } else {
+            appendMessage(`⚠️ Error: ${data.error || 'Failed to get response from AI.'}`, 'ai');
         }
+    } catch (e) {
+        removeTypingIndicator();
+        console.error("Chat error:", e);
+        appendMessage('⚠️ Connection Error: Failed to reach the backend server.', 'ai');
     }
-
-    removeTypingIndicator();
-    appendMessage(`⚠️ <strong>Connection Error</strong><br><pre style="font-size:10px; background:rgba(0,0,0,0.5); padding:10px; white-space:pre-wrap;">${fullErrorLog}</pre>`, 'ai');
 }
 
 if (sendChatBtn) sendChatBtn.addEventListener('click', handleSendMessage);

@@ -39,7 +39,7 @@ auth.onAuthStateChanged((user) => {
     if (user) {
         // User is signed in
         if (isAuthPage) {
-            window.location.href = 'index.html'; // Redirect to dashboard
+            window.location.href = 'dashboard.html'; // Redirect to premium dashboard
         }
     } else {
         // User is signed out
