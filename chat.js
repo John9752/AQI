@@ -2,10 +2,8 @@
     // ==========================================
     // CHAT CONFIGURATION
     // ==========================================
-    const BACKEND_ORIGINS = ['http://127.0.0.1:5000', 'http://localhost:5000'];
-    const base_url = BACKEND_ORIGINS.includes(window.location.origin)
-        ? '' // Same origin
-        : 'http://127.0.0.1:5000'; // External origin
+    // Automatically use the same origin as the dashboard
+    const base_url = window.location.origin;
 
     const floatingChatBtn = document.getElementById('floatingChatBtn');
     const chatWidget = document.getElementById('chatWidget');
@@ -100,7 +98,7 @@
         } catch (e) {
             removeTypingIndicator();
             console.error("Chat error:", e);
-            appendMessage('⚠️ Connection Error: Failed to reach the backend server.', 'ai');
+            appendMessage(`⚠️ Connection Error: ${e.message}. (Is the backend running at ${base_url}?)`, 'ai');
         }
     }
 
