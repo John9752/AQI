@@ -22,3 +22,10 @@ I have resolved the critical issues that were causing the dashboard to show "Una
 *   **Performance Optimization**: The AI model is now loaded **once** when the server starts, rather than every time a user clicks search. This makes your dashboard much more responsive!
 
 Everything is now fully synchronized. You can search for cities, view the colored map clouds, and get live AI forecasts without interruption!
+
+## 4. Render.com Deployment Optimization
+I have configured the repository for seamless deployment on Render:
+- **`render.yaml`**: Added a native blueprint for Python/Flask, ensuring Render doesn't mistake this for a Node.js project.
+- **Dynamic Port Scaling**: Updated `backend/app.py` to automatically detect Render's assigned `PORT` while remaining compatible with local development on port `8888`.
+- **Production Safety**: Added logic to disable `debug` mode automatically when deployed in a production environment.
+
