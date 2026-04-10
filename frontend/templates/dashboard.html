@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Premium Dashboard - AQI Assistant</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/static/css/style.css">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Leaflet.js for Maps -->
@@ -15,9 +15,9 @@
     <nav class="navbar">
         <div class="logo">🌬️ AQInsight Pro</div>
         <div class="nav-links">
-            <a href="dashboard.html" class="active">Dashboard</a>
-            <a href="health-advice.html">Health Advice</a>
-            <a href="profile.html">Profile</a>
+            <a href="/" class="active">Dashboard</a>
+            <a href="/health-advice.html">Health Advice</a>
+            <a href="/profile.html">Profile</a>
             <button id="logoutBtn" class="btn-outline">Logout</button>
         </div>
     </nav>
@@ -59,7 +59,10 @@
                     <p class="small-text">Get alerted when AQI exceeds unhealthy levels.</p>
                     <div class="sub-form">
                         <input type="email" id="subEmail" placeholder="Enter your email">
-                        <button id="subscribeBtn" class="btn-secondary">Enable Alerts</button>
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <button id="subscribeBtn" class="btn-secondary" style="flex: 1;">Enable Alerts</button>
+                            <button id="unsubscribeBtn" class="btn-secondary" style="flex: 1; background: rgba(239, 68, 68, 0.2); border-color: #ef4444; color: #ef4444;">Disable Alerts</button>
+                        </div>
                     </div>
                 </section>
 
@@ -136,10 +139,8 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
     <!-- Scripts -->
-    <script src="auth.js"></script>
-    <script src="charts.js"></script>
-    <script src="ai.js"></script>
-    <script src="script.js"></script>
-    <script src="chat.js?v=2"></script>
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/dashboard.js"></script>
+    <script src="/static/js/chat.js?v=2"></script>
 </body>
 </html>

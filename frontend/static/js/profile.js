@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     
-    const API_BASE_URL = 'http://127.0.0.1:5000';
+    const API_BASE_URL = window.location.origin;
 
     // Bind UI elements
     const profileName = document.getElementById('profileName');
@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchUserPreferences(userEmailAddress);
         } else {
             // Not logged in -> boot back to Auth!
-            window.location.href = "login.html";
+            window.location.href = "/login.html";
         }
     });
 

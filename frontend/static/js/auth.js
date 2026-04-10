@@ -37,14 +37,14 @@ const isAuthPage = currentPath.includes('login.html') || currentPath.includes('s
 
 auth.onAuthStateChanged((user) => {
     if (user) {
-        // User is signed in
+        // User is signed in - redirect away from auth pages
         if (isAuthPage) {
-            window.location.href = 'dashboard.html'; // Redirect to premium dashboard
+            window.location.href = '/dashboard.html';
         }
     } else {
-        // User is signed out
+        // User is signed out - ALL non-auth pages redirect to login
         if (!isAuthPage) {
-            window.location.href = 'login.html'; // Redirect to login
+            window.location.href = '/login.html';
         }
     }
 });
@@ -124,12 +124,9 @@ if (signupForm) {
 }
 
 // ==========================================
-// BACKEND BASE URL
+// BACKEND BASE URL (Dynamic for mobile connectivity)
 // ==========================================
-const AUTH_BACKEND_ORIGINS = ['http://127.0.0.1:5000', 'http://localhost:5000'];
-const AUTH_API_BASE_URL = AUTH_BACKEND_ORIGINS.includes(window.location.origin)
-    ? ''
-    : 'http://127.0.0.1:5000';
+const AUTH_API_BASE_URL = window.location.origin;
 
 // ==========================================
 // LOGOUT LOGIC

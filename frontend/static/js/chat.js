@@ -86,14 +86,29 @@
                 })
             });
 
-            const data = await response.json();
+            let data;
+            try {
+                data = await response.json();
+            } catch (jsonErr) {
+                removeTypingIndicator();
+                console.error("JSON parse error:", jsonErr);
+                appendMessage(`⚠️ Server Error: Received invalid response format. (Status: ${response.status})`, 'ai');
+                return;
+            }
 
             removeTypingIndicator();
 
             if (response.ok && data.response) {
                 appendMessage(data.response, 'ai');
+            } else if (response.status === 429) {
+                // Rate limit - friendly message with retry button
+                const msgDiv = document.createElement('div');
+                msgDiv.classList.add('message', 'ai-message');
+                msgDiv.innerHTML = `⏳ The AI is busy right now. <a href="#" onclick="event.preventDefault(); document.getElementById('chatInput').value='${text.replace(/'/g,"\\'")}'; document.getElementById('sendChatBtn').click();" style="color:#3b82f6;">Try again</a>`;
+                chatBody.appendChild(msgDiv);
+                chatBody.scrollTop = chatBody.scrollHeight;
             } else {
-                appendMessage(`⚠️ Error: ${data.error || 'Failed to get response from AI.'}`, 'ai');
+                appendMessage(`⚠️ Error: ${data.error || data.details || 'Failed to get response from AI.'}`, 'ai');
             }
         } catch (e) {
             removeTypingIndicator();

@@ -25,6 +25,9 @@ def send_aqi_alert(recipient_email, city, aqi, status, recommendation):
         # Determine color for the email (optional HTML styling)
         color = "#ef4444" if aqi > 200 else "#f97316"
         
+        # Construct unsubscribe URL
+        unsubscribe_url = f"http://192.168.31.174:8888/unsubscribe_confirm?email={recipient_email}"
+        
         body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -44,10 +47,11 @@ def send_aqi_alert(recipient_email, city, aqi, status, recommendation):
                     <p><b>Health Recommendation:</b></p>
                     <p>{recommendation}</p>
                     
-                    <p style="font-size: 12px; color: #777; margin-top: 30px;">
-                        Timestamp: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}<br>
-                        This is an automated alert from your Personal AQI Health Assistant.
-                    </p>
+                    <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 15px; text-align: center; font-size: 11px; color: #888;">
+                        <p>Timestamp: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+                        <p>This is an automated alert from your Personal AQI Health Assistant.</p>
+                        <p><a href="{unsubscribe_url}" style="color: #64748b; text-decoration: underline;">Stop receiving these alerts (Unsubscribe)</a></p>
+                    </div>
                 </div>
             </div>
         </body>

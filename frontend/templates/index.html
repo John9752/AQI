@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Personal AQI Health Assistant</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/static/css/style.css">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Leaflet.js for Maps -->
@@ -18,9 +18,9 @@
     <nav class="navbar">
         <div class="logo">🌬️ AQInsight</div>
         <div class="nav-links">
-            <a href="index.html" class="active">Dashboard</a>
-            <a href="health-advice.html">Health Advice</a>
-            <a href="profile.html">Profile</a>
+            <a href="/" class="active">Dashboard</a>
+            <a href="/health-advice.html">Health Advice</a>
+            <a href="/profile.html">Profile</a>
             <button id="logoutBtn" class="btn-outline">Logout</button>
         </div>
     </nav>
@@ -110,10 +110,8 @@
         💬 Ask AI
     </button>
 
-    <script src="auth.js"></script>
-    <script src="charts.js"></script>
-    <script src="ai.js"></script>
-    <script src="script.js"></script>
-    <script src="chat.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/dashboard.js"></script>
+    <script src="/static/js/chat.js"></script>
 </body>
 </html>

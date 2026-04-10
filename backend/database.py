@@ -92,3 +92,15 @@ def add_subscription(email, city, threshold=101):
         return False
     finally:
         conn.close()
+def delete_subscription(email):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    try:
+        cursor.execute('DELETE FROM subscriptions WHERE email = ?', (email,))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"DB Error: {e}")
+        return False
+    finally:
+        conn.close()
