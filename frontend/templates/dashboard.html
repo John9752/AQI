@@ -5,13 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Premium Dashboard - AQI Assistant</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/animations.css">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Leaflet.js for Maps -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- GSAP for Realistic Animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/MotionPathPlugin.min.js"></script>
 </head>
 <body class="dashboard-page">
+    <div id="dynamic-bg-container"></div>
     <nav class="navbar">
         <div class="logo">🌬️ AQInsight Pro</div>
         <div class="nav-links">
@@ -46,11 +51,17 @@
                     <div class="aqi-meter">
                         <div class="aqi-circle" id="aqiCircle">
                             <span id="aqiValue">--</span>
-                            <span class="aqi-label">AQI</span>
+                            <span class="aqi-label">AQI (Index)</span>
                         </div>
                     </div>
                     <div class="aqi-status" id="aqiStatus">Standby</div>
                     <p id="healthRecommendation" class="health-rec">Searching for local data...</p>
+                    
+                    <div class="main-pollutant-box" id="mainPollutantContainer" style="display: none; margin-top: 10px; padding: 5px; background: rgba(255,255,255,0.05); border-radius: 4px; font-size: 13px;">
+                        <strong>Main Pollutant:</strong> <span id="mainPollutantName">--</span>
+                    </div>
+
+
                 </section>
 
                 <!-- Subscription Card -->
@@ -107,6 +118,44 @@
                 </div>
             </div>
         </div>
+
+        <!-- 10-Year Vizag Forecast - Full Width Below Grid -->
+        <section class="card" style="margin-top: 2rem; padding: 2rem;">
+            <h2 class="card-title" style="font-size: 1.25rem; margin: 0 0 6px 0;">📈 10-Year AQI Forecast — Vizag Areas (2026–2036)</h2>
+            <p class="small-text" style="margin-bottom: 1.5rem;">Search any locality in Visakhapatnam to view its predicted AQI trajectory</p>
+            
+            <!-- Area Search Row -->
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 1.5rem;">
+                <div style="flex: 1; min-width: 200px; position: relative;">
+                    <input type="text" id="vizagAreaSearch" list="vizagAreaList" placeholder="🔍 Type area name (e.g. Rushikonda, Gajuwaka...)" style="width: 100%; padding: 12px 16px; border-radius: 10px; background: rgba(15, 23, 42, 0.9); color: white; border: 1px solid rgba(255,255,255,0.2); font-size: 14px;" autocomplete="off">
+                    <datalist id="vizagAreaList"></datalist>
+                </div>
+                <button id="vizagShowForecastBtn" class="btn-primary" style="padding: 12px 24px; font-size: 14px;">📊 Show Forecast</button>
+            </div>
+
+            <!-- Chart Area (shows after search) -->
+            <div id="vizagForecastInfo" style="display:none; margin-bottom: 12px;">
+                <span id="vizagForecastAreaName" style="font-size: 18px; font-weight: 600; color: #e2e8f0;"></span>
+                <span id="vizagForecastBaseline" style="font-size: 13px; color: #94a3b8; margin-left: 12px;"></span>
+            </div>
+            <div style="height: 400px; width: 100%;">
+                <canvas id="vizagForecastChart"></canvas>
+            </div>
+
+            <!-- Date-Specific Prediction Row -->
+            <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 18px;">
+                <h3 style="font-size: 14px; margin-bottom: 12px; color: #cbd5e1;">🗓️ Predict AQI for a Specific Date</h3>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                    <select id="vizagAreaSelect" style="padding: 10px 14px; border-radius: 8px; background: rgba(15, 23, 42, 0.9); color: white; border: 1px solid rgba(255,255,255,0.2); font-size: 13px; min-width: 160px;"></select>
+                    <input type="date" id="vizagDateInput" min="2026-01-01" max="2036-12-31" style="padding: 10px 14px; border-radius: 8px; background: rgba(15, 23, 42, 0.9); color: white; border: 1px solid rgba(255,255,255,0.2); font-size: 13px;">
+                    <button id="vizagPredictBtn" class="btn-primary" style="padding: 10px 20px; font-size: 13px;">🔍 Predict AQI</button>
+                    <div style="background: rgba(59, 130, 246, 0.12); border: 1px solid rgba(59,130,246,0.3); padding: 10px 20px; border-radius: 8px; min-width: 140px; text-align: center;">
+                        <span style="font-size: 11px; color: #94a3b8; display: block;">Predicted AQI</span>
+                        <span id="vizagSpecificResult" style="font-size: 1.4rem; font-weight: bold; color: #3b82f6;">--</span>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
     <footer class="dashboard-footer">
@@ -140,6 +189,7 @@
 
     <!-- Scripts -->
     <script src="/static/js/auth.js"></script>
+    <script src="/static/js/animations.js"></script>
     <script src="/static/js/dashboard.js"></script>
     <script src="/static/js/chat.js?v=2"></script>
 </body>

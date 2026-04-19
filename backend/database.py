@@ -44,6 +44,7 @@ def init_db():
 def save_aqi_reading(city, aqi, components):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+    city = city.lower().strip()
     cursor.execute('''
         INSERT INTO aqi_history (city, aqi, pm25, pm10, no2, co, so2, o3, temperature, humidity)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -56,6 +57,7 @@ def save_aqi_reading(city, aqi, components):
 def get_aqi_trends(city, days=7):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+    city = city.lower().strip()
     # Get data grouped by date (average AQI per day)
     cursor.execute('''
         SELECT DATE(timestamp) as date, AVG(aqi) as avg_aqi

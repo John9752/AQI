@@ -3,6 +3,7 @@ let pollutantsChart = null;
 let trendChart = null;
 let areaChart = null;
 let mapInstance = null;
+let vizagForecastChart = null;
 
 // ==========================================
 // EVENT LISTENERS
@@ -60,7 +61,18 @@ function initPollutantsChart(components) {
                 borderRadius: 8
             }]
         },
-        options: getCommonOptions('Pollutants Concentration')
+        options: {
+            ...getCommonOptions('Pollutants Concentration'),
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return ` ${context.parsed.y} μg/m³`;
+                        }
+                    }
+                }
+            }
+        }
     });
 }
 
@@ -206,14 +218,24 @@ function getCommonOptions(title) {
 }
 
 // ==========================================
-// DATA MAPPING & CONFIGURATION
+// DATA MAPPING & CONFIGURATION (Dual Standards)
 // ==========================================
 const AQI_MAPPING = {
-    1: { label: 'Good', colorClass: 'good', textClass: 'text-good', recommendation: 'Air quality is satisfactory. Ideal for outdoor activities.' },
-    2: { label: 'Moderate', colorClass: 'moderate', textClass: 'text-moderate', recommendation: 'Air quality is acceptable. Sensitive individuals should limit exertion.' },
-    3: { label: 'Unhealthy for Sensitive Groups', colorClass: 'unhealthy-sensitive', textClass: 'text-warning', recommendation: 'Sensitive groups may experience health effects. Limit outdoor exertion.' },
-    4: { label: 'Unhealthy', colorClass: 'unhealthy', textClass: 'text-danger', recommendation: 'Health alert! Everyone may experience health effects. Wear a mask.' },
-    5: { label: 'Very Unhealthy / Hazardous', colorClass: 'hazardous', textClass: 'text-hazardous', recommendation: 'Health warnings of emergency conditions. Stay indoors.' }
+    'IN': { // Indian National AQI (CPCB)
+        1: { label: 'Good', colorClass: 'aqi-1', textClass: 'text-1', recommendation: 'Air quality is satisfactory. Pose little or no risk.' },
+        2: { label: 'Satisfactory', colorClass: 'aqi-2', textClass: 'text-2', recommendation: 'Sensitive people may experience minor breathing discomfort.' },
+        3: { label: 'Moderate', colorClass: 'aqi-3', textClass: 'text-3', recommendation: 'May cause breathing discomfort to people with lungs/asthma/heart diseases.' },
+        4: { label: 'Poor', colorClass: 'aqi-4', textClass: 'text-4', recommendation: 'May cause breathing discomfort to most people on prolonged exposure.' },
+        5: { label: 'Very Poor', colorClass: 'aqi-5', textClass: 'text-5', recommendation: 'May cause respiratory illness on prolonged exposure.' },
+        6: { label: 'Severe', colorClass: 'aqi-6', textClass: 'text-6', recommendation: 'Affects healthy people and seriously impacts those with existing diseases.' }
+    },
+    'INTL': { // US EPA / International
+        1: { label: 'Good', colorClass: 'aqi-1', textClass: 'text-1', recommendation: 'Air quality is satisfactory. Ideal for outdoor activities.' },
+        2: { label: 'Moderate', colorClass: 'aqi-2', textClass: 'text-2', recommendation: 'Sensitive individuals should limit prolonged outdoor exertion.' },
+        3: { label: 'Unhealthy (Sensitive)', colorClass: 'aqi-3', textClass: 'text-3', recommendation: 'Sensitive groups may experience health effects. Limit exertion.' },
+        4: { label: 'Unhealthy', colorClass: 'aqi-4', textClass: 'text-4', recommendation: 'Everyone may experience health effects. Wear a mask.' },
+        5: { label: 'Very Unhealthy', colorClass: 'aqi-5', textClass: 'text-5', recommendation: 'Health warnings of emergency conditions. Stay indoors.' }
+    }
 };
 
 const API_BASE_URL = window.location.origin;
@@ -302,8 +324,10 @@ document.addEventListener('mapLocationSelected', (e) => {
 
 async function fetchDashboardData(city) {
     try {
-        // Step 1: Fetch current AQI from our Backend
-        const response = await fetch(`${API_BASE_URL}/get_aqi?city=${city}`);
+        console.log(`Fetching data for: ${city}`);
+        
+        // Use the endpoint that supports source attribution and requested_name
+        const response = await fetch(`${API_BASE_URL}/get_current_aqi?city=${encodeURIComponent(city)}`);
         const data = await response.json();
 
         if (data.error) {
@@ -311,13 +335,14 @@ async function fetchDashboardData(city) {
             return;
         }
 
-        // Update UI
+        // Update main dashboard UI
         updateUI(data);
 
+        // Notify chart and map components
         document.dispatchEvent(new CustomEvent('renderPollutants', { detail: data.components }));
         document.dispatchEvent(new CustomEvent('renderMap', { detail: { coordinates: data.coordinates, city: data.city, level: data.level } }));
         
-        // Step 1.5: Trigger AI Prediction
+        // Trigger AI Prediction
         const componentsForPredict = {
             pm25: data.components.pm2_5,
             pm10: data.components.pm10,
@@ -330,12 +355,13 @@ async function fetchDashboardData(city) {
         };
         fetchPrediction(componentsForPredict);
         
-        // Step 2: Fetch Trend data
-        fetchTrendData(city);
+        // Fetch historical trends using the name hint to ensure DB match
+        const trendsName = data.requested_name || city;
+        fetchTrendData(trendsName);
 
     } catch (error) {
         console.error("Fetch Error:", error);
-        showAlert("Check if your Backend (app.py) is running on port 8888.");
+        showAlert("Check if your Backend is running.");
     }
 }
 
@@ -367,9 +393,8 @@ async function loadDataByCoords(lat, lon) {
         };
         fetchPrediction(componentsForPredict);
         
-        // Fetch Trends for the area (if possible, current database stores by city name)
-        const cityOnly = data.city.split(',')[0].trim();
-        fetchTrendData(cityOnly);
+        // Fetch Trends for the area using the specific location name
+        fetchTrendData(data.city);
 
     } catch (error) {
         console.error("Coords Fetch Error:", error);
@@ -378,11 +403,19 @@ async function loadDataByCoords(lat, lon) {
 
 async function fetchTrendData(city) {
     try {
-        const response = await fetch(`${API_BASE_URL}/aqi_trends?city=${city}`);
+        const trendContainer = document.getElementById('trendChartContainer');
+        if (trendContainer && !document.getElementById('trendChart')) {
+             trendContainer.innerHTML = '<canvas id="trendChart"></canvas>';
+        }
+
+        const response = await fetch(`${API_BASE_URL}/aqi_trends?city=${encodeURIComponent(city)}`);
         const trends = await response.json();
         
         if (trends && trends.length > 0) {
             document.dispatchEvent(new CustomEvent('renderTrends', { detail: trends }));
+        } else {
+             console.log("No trend data returned for", city);
+             // Optionally show a placeholder if empty
         }
     } catch (error) {
         console.warn("Could not fetch trends:", error);
@@ -390,12 +423,27 @@ async function fetchTrendData(city) {
 }
 
 function updateUI(data) {
-    const config = AQI_MAPPING[data.level];
+    // Extract country from location string (e.g., "Visakhapatnam, IN")
+    const isIndia = data.city.includes(', IN');
+    const mappingProfile = isIndia ? AQI_MAPPING['IN'] : AQI_MAPPING['INTL'];
+    const config = mappingProfile[data.level] || mappingProfile[1];
     
     cityNameDisplay.textContent = data.city;
-    aqiValueDisplay.textContent = data.aqi;
-    aqiStatusDisplay.textContent = config.label;
-    healthRecDisplay.textContent = config.recommendation;
+    aqiValueDisplay.textContent = Math.round(data.aqi);
+    aqiStatusDisplay.textContent = data.category || config.label;
+    healthRecDisplay.textContent = data.health_message || config.recommendation;
+
+    // Use dominant pollutant correctly evaluated by CPCB breakpoints
+    if (data.dominant_pollutant) {
+        const mainPName = document.getElementById('mainPollutantName');
+        const mainPCont = document.getElementById('mainPollutantContainer');
+        if (mainPName && mainPCont) {
+            mainPName.textContent = data.dominant_pollutant;
+            mainPCont.style.display = 'block';
+        }
+    }
+
+
 
     // Reset styles
     aqiCircle.className = 'aqi-circle';
@@ -407,18 +455,24 @@ function updateUI(data) {
 
     // Visual Alert logic
     alertContainer.innerHTML = '';
-    if (data.level >= 4) {
+    const alertThreshold = isIndia ? 4 : 3; // Trigger earlier for International standards 
+    if (data.level >= alertThreshold) {
         alertContainer.innerHTML = `
             <div class="alert">
                 <span><strong>High Pollution Alert:</strong> ${config.recommendation}</span>
             </div>
         `;
     }
+
+    // Trigger Dynamic Background Animation
+    if (window.aqiAnimator) {
+        window.aqiAnimator.setAQILevel(data.level);
+    }
 }
 
 async function handleSubscription() {
     const email = subEmailInput.value.trim();
-    const city = cityNameDisplay.textContent.split(',')[0].trim();
+    const city = cityNameDisplay.textContent.trim();
 
     if (!email || city === "Detecting...") {
         showAlert("Please enter a valid email and search for a city first.");
@@ -486,10 +540,229 @@ async function fetchPrediction(components) {
     }
 }
 
+async function loadVizag10YrForecast(area) {
+    if (!area) area = 'Visakhapatnam';
+    const ctx = document.getElementById('vizagForecastChart')?.getContext('2d');
+    if (!ctx) return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/vizag_10yr_forecast?area=${encodeURIComponent(area)}`);
+        const data = await response.json();
+        
+        if (data.error || !data.years) return;
+
+        if (vizagForecastChart) {
+            vizagForecastChart.destroy();
+        }
+
+        // Show area info
+        const infoBox = document.getElementById('vizagForecastInfo');
+        const nameEl = document.getElementById('vizagForecastAreaName');
+        const baseEl = document.getElementById('vizagForecastBaseline');
+        if (infoBox && nameEl) {
+            infoBox.style.display = 'block';
+            nameEl.textContent = `📍 ${data.area}`;
+            if (baseEl) baseEl.textContent = `(Baseline: ${data.baseline_mean} AQI · σ ${data.baseline_std})`;
+        }
+
+        // Color based on average AQI
+        const avgAqi = data.forecast.reduce((a, b) => a + b, 0) / data.forecast.length;
+        let lineColor = '#10b981';
+        if (avgAqi > 200) lineColor = '#ef4444';
+        else if (avgAqi > 100) lineColor = '#f59e0b';
+        else if (avgAqi > 50) lineColor = '#fbbf24';
+
+        // Gradient fill
+        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, lineColor + '40');
+        gradient.addColorStop(1, lineColor + '05');
+
+        vizagForecastChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.years,
+                datasets: [{
+                    label: data.area + ' AQI',
+                    data: data.forecast,
+                    borderColor: lineColor,
+                    backgroundColor: gradient,
+                    borderWidth: 3,
+                    tension: 0.35,
+                    pointRadius: 5,
+                    pointBackgroundColor: lineColor,
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointHoverRadius: 8,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: { color: '#cbd5e1', font: { size: 13, weight: 'bold' } }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                        titleFont: { size: 14 },
+                        bodyFont: { size: 13 },
+                        callbacks: {
+                            label: function(context) {
+                                const val = context.parsed.y;
+                                let cat = 'Good';
+                                if (val > 400) cat = 'Severe';
+                                else if (val > 300) cat = 'Very Poor';
+                                else if (val > 200) cat = 'Poor';
+                                else if (val > 100) cat = 'Moderate';
+                                else if (val > 50) cat = 'Satisfactory';
+                                return `AQI: ${val} (${cat})`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#94a3b8', font: { size: 12 } },
+                        grid: { display: false }
+                    },
+                    y: {
+                        ticks: { color: '#94a3b8', font: { size: 12 } },
+                        grid: { color: 'rgba(255, 255, 255, 0.06)' },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+    } catch (e) {
+        console.warn(`Could not load forecast for ${area}.`, e);
+    }
+}
+
+async function initVizagDateLookup() {
+    const select = document.getElementById('vizagAreaSelect');
+    const predictBtn = document.getElementById('vizagPredictBtn');
+    const dateInput = document.getElementById('vizagDateInput');
+    const resultDisplay = document.getElementById('vizagSpecificResult');
+    const searchInput = document.getElementById('vizagAreaSearch');
+    const datalist = document.getElementById('vizagAreaList');
+    const showForecastBtn = document.getElementById('vizagShowForecastBtn');
+
+    if (!select || !predictBtn) return;
+
+    // Fetch all areas from backend
+    let allAreas = [];
+    try {
+        const res = await fetch(`${API_BASE_URL}/forecast_areas`);
+        const data = await res.json();
+        if (data.areas) {
+            allAreas = data.areas;
+            // Populate the datalist for autocomplete search
+            if (datalist) {
+                allAreas.forEach(area => {
+                    const opt = document.createElement('option');
+                    opt.value = area;
+                    datalist.appendChild(opt);
+                });
+            }
+            // Populate the select dropdown for date prediction
+            allAreas.forEach(area => {
+                const option = document.createElement('option');
+                option.value = area;
+                option.textContent = area;
+                select.appendChild(option);
+            });
+        }
+    } catch (e) {
+        console.warn('Could not load forecast areas', e);
+    }
+
+    // Show Forecast button: search area and render its chart
+    if (showForecastBtn && searchInput) {
+        showForecastBtn.addEventListener('click', () => {
+            const area = searchInput.value.trim();
+            if (area) {
+                loadVizag10YrForecast(area);
+                // Also sync the date prediction dropdown
+                select.value = area;
+            }
+        });
+        // Also trigger on Enter key
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                showForecastBtn.click();
+            }
+        });
+    }
+
+    // Set default date to today + 1 year
+    const defaultDate = new Date();
+    defaultDate.setFullYear(defaultDate.getFullYear() + 1);
+    dateInput.value = defaultDate.toISOString().split('T')[0];
+
+    // Date prediction button
+    predictBtn.addEventListener('click', async () => {
+        const area = select.value;
+        const date = dateInput.value;
+
+        if (!date) {
+            resultDisplay.textContent = 'Select a date!';
+            return;
+        }
+
+        const yr = parseInt(date.split('-')[0]);
+        if (yr < 2026 || yr > 2036) {
+            resultDisplay.textContent = 'Pick 2026\u20132036';
+            return;
+        }
+
+        predictBtn.textContent = '\u23f3...';
+        predictBtn.disabled = true;
+        resultDisplay.textContent = '--';
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/vizag_date_prediction?area=${encodeURIComponent(area)}&date=${date}`);
+            const data = await response.json();
+
+            if (data.error) {
+                resultDisplay.textContent = 'Error';
+                return;
+            }
+
+            const aqi = data.predicted_aqi;
+            const category = data.category || '';
+
+            let color = '#10b981';
+            if (aqi > 400) color = '#7f1d1d';
+            else if (aqi > 300) color = '#8b5cf6';
+            else if (aqi > 200) color = '#ef4444';
+            else if (aqi > 100) color = '#f59e0b';
+            else if (aqi > 50)  color = '#fbbf24';
+
+            resultDisplay.style.color = color;
+            resultDisplay.title = `${area} on ${date}: AQI ${aqi} (${category})`;
+            resultDisplay.textContent = `${aqi} \u00b7 ${category}`;
+
+        } catch (e) {
+            resultDisplay.textContent = 'Error';
+            console.error('Date prediction error', e);
+        } finally {
+            predictBtn.textContent = '\ud83d\udd0d Predict AQI';
+            predictBtn.disabled = false;
+        }
+    });
+}
+
 // Initial Load
 window.addEventListener('load', () => {
     if (cityInput) {
-        cityInput.value = 'New York';
-        fetchDashboardData('New York');
+        cityInput.value = 'Visakhapatnam';
+        fetchDashboardData('Visakhapatnam');
+        loadVizag10YrForecast('Visakhapatnam');
+        initVizagDateLookup();
     }
 });
