@@ -296,7 +296,7 @@ def chat_proxy():
     prompt = f"User Question: {data.get('message', '')}"
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
     try:
-        resp = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=10)
+        resp = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=30)
         json_data = resp.json()
         
         if 'candidates' in json_data and len(json_data['candidates']) > 0:
