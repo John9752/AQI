@@ -294,7 +294,7 @@ def chat_proxy():
     api_key = os.getenv('GEMINI_API_KEY')
     if not api_key: return jsonify({"error": "API Key missing"}), 500
     prompt = f"User Question: {data.get('message', '')}"
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
     try:
         resp = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=10)
         json_data = resp.json()
