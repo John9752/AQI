@@ -126,7 +126,7 @@ if (signupForm) {
 // ==========================================
 // BACKEND BASE URL (Dynamic for mobile connectivity)
 // ==========================================
-const AUTH_API_BASE_URL = window.location.origin;
+const AUTH_API_BASE_URL = "https://aqi-1-6783.onrender.com";
 
 // ==========================================
 // LOGOUT LOGIC
