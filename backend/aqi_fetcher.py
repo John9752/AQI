@@ -173,7 +173,10 @@ def fetch_historical_aqi(city, days=7):
         return trends
         
     except Exception as e:
-        return {"error": str(e)}
+        import traceback
+        print(f"[Historical Fetch Error] {str(e)}")
+        traceback.print_exc()
+        return {"error": f"Historical processing error: {str(e)}"}
 
 def fetch_aqi_data(city):
     """
@@ -181,6 +184,9 @@ def fetch_aqi_data(city):
     (for temperature/humidity) from OpenWeather APIs.
     Includes Smart Fallbacks for localized areas (suburbs/neighborhoods).
     """
+    if not API_KEY:
+        return {"error": "OPENWEATHER_API_KEY is missing in backend environment"}
+
     try:
         # 1. Geocoding with Smart Fallbacks
         search_terms = []
@@ -194,18 +200,22 @@ def fetch_aqi_data(city):
             geo_url = f"https://api.openweathermap.org/geo/1.0/direct?q={term}&limit=1&appid={API_KEY}"
             try:
                 resp = requests.get(geo_url).json()
-                if resp:
+                if isinstance(resp, list) and len(resp) > 0:
                     geo_data = resp
                     break
+                elif isinstance(resp, dict) and "message" in resp:
+                    return {"error": f"OpenWeather API Error: {resp['message']}"}
             except Exception:
                 continue
         
         if not geo_data:
-            return {"error": "City not found"}
+            return {"error": f"City '{city}' not found. Please check spelling."}
         
-        lat, lon = geo_data[0]['lat'], geo_data[0]['lon']
-        full_name = f"{geo_data[0]['name']}, {geo_data[0].get('country', '')}"
-        country_code = geo_data[0].get('country', '')
+        # Safe extraction from list
+        first_match = geo_data[0]
+        lat, lon = first_match['lat'], first_match['lon']
+        full_name = f"{first_match['name']}, {first_match.get('country', '')}"
+        country_code = first_match.get('country', '')
         
         # 2. Fetch AQI
         aqi_url = f"https://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={API_KEY}"
@@ -262,9 +272,15 @@ def fetch_aqi_data(city):
         return {"error": "Could not parse API response"}
             
     except Exception as e:
-        return {"error": str(e)}
+        import traceback
+        print(f"[AQI Fetcher Error] {str(e)}")
+        traceback.print_exc()
+        return {"error": f"Backend processing error: {type(e).__name__}: {str(e)}"}
 
 def fetch_aqi_by_coords(lat, lon):
+    if not API_KEY:
+        return {"error": "OPENWEATHER_API_KEY is missing in backend environment"}
+
     try:
         # Reverse Geocoding
         geo_url = f"https://api.openweathermap.org/geo/1.0/reverse?lat={lat}&lon={lon}&limit=1&appid={API_KEY}"
@@ -273,10 +289,13 @@ def fetch_aqi_by_coords(lat, lon):
         city_for_db = f"Lat:{lat}, Lon:{lon}"
         country_code = ""
         
-        if geo_data:
-            location_name = f"{geo_data[0].get('name', 'Selected Area')}, {geo_data[0].get('country', '')}"
-            city_for_db = geo_data[0].get('name', 'Unknown')
-            country_code = geo_data[0].get('country', '')
+        if isinstance(geo_data, list) and len(geo_data) > 0:
+            first_match = geo_data[0]
+            location_name = f"{first_match.get('name', 'Selected Area')}, {first_match.get('country', '')}"
+            city_for_db = first_match.get('name', 'Unknown')
+            country_code = first_match.get('country', '')
+        elif isinstance(geo_data, dict) and "message" in geo_data:
+            return {"error": f"Geocoding Error: {geo_data['message']}"}
             
         # Air Pollution
         aqi_url = f"https://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={API_KEY}"
@@ -324,4 +343,7 @@ def fetch_aqi_by_coords(lat, lon):
             }
         return {"error": "Could not parse API response"}
     except Exception as e:
-        return {"error": str(e)}
+        import traceback
+        print(f"[Coords Fetcher Error] {str(e)}")
+        traceback.print_exc()
+        return {"error": f"Backend coordinate error: {type(e).__name__}: {str(e)}"}
