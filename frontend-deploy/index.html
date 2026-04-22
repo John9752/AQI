@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Personal AQI Health Assistant</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Leaflet.js for Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Firebase v8 Compat SDKs for simplicity without a bundler -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">🌬️ AQInsight</div>
+        <div class="nav-links">
+            <a href="/" class="active">Dashboard</a>
+            <a href="/health-advice.html">Health Advice</a>
+            <a href="/profile.html">Profile</a>
+            <button id="logoutBtn" class="btn-outline">Logout</button>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div id="alertContainer" class="alert-container"></div>
+
+        <header class="dashboard-header">
+            <div>
+                <h1>Real-Time AQI Dashboard</h1>
+                <p>Monitor air quality and get health recommendations</p>
+            </div>
+            <div class="search-box">
+                <input type="text" id="cityInput" placeholder="Enter city name...">
+                <button id="searchBtn" class="btn-primary">Check AQI</button>
+            </div>
+        </header>
+
+        <div class="dashboard-grid">
+            <!-- Main AQI Display -->
+            <section class="card aqi-card">
+                <h2>Current Air Quality</h2>
+                <h3 id="cityNameDisplay">City Name</h3>
+                <div class="aqi-circle" id="aqiCircle">
+                    <span id="aqiValue">--</span>
+                    <span class="aqi-label">AQI</span>
+                </div>
+                <div class="aqi-status" id="aqiStatus">Loading...</div>
+                <p id="healthRecommendation" class="health-rec">Enter a city to display health info.</p>
+                
+                <div class="subscription-section">
+                    <h3>Get Email Alerts</h3>
+                    <div class="sub-form">
+                        <input type="email" id="subEmail" placeholder="Enter your email...">
+                        <button id="subscribeBtn" class="btn-primary full-width">Subscribe</button>
+                    </div>
+                    <p class="small-text">Receive alerts when AQI exceeds unhealthy levels.</p>
+                </div>
+            </section>
+
+            <!-- Pollutants Breakdown -->
+            <section class="card map-card">
+                <h2>Location & Nearby Stations</h2>
+                <div id="map"></div>
+            </section>
+
+            <section class="card pollutants-card">
+                <h2>Pollutants Breakdown</h2>
+                <div class="chart-container">
+                    <canvas id="pollutantsChart"></canvas>
+                </div>
+            </section>
+
+            <!-- AI Prediction -->
+            <section class="card ai-card">
+                <h2>AI Prediction (Tomorrow)</h2>
+                <div class="prediction-content">
+                    <div class="trend-icon" id="trendIcon">🔮</div>
+                    <div class="forecast-info">
+                        <h3 id="tomorrowAqi">--</h3>
+                        <p id="trendText">Gathering data for prediction...</p>
+                    </div>
+                </div>
+                <p class="small-text">Based on statistical regression models.</p>
+            </section>
+        </div>
+    </main>
+
+    <!-- GenAI Chat Widget -->
+    <div id="chatWidget" class="chat-widget">
+        <div class="chat-header">
+            <h3>Health Assistant AI</h3>
+            <button id="closeChatBtn" class="close-btn">&times;</button>
+        </div>
+        <div class="chat-body" id="chatBody">
+            <div class="message ai-message">
+                Hello! I am your AQI Health Assistant. How can I help you today?
+            </div>
+        </div>
+        <div class="chat-footer">
+            <input type="text" id="chatInput" placeholder="Ask about activities, masks...">
+            <button id="sendChatBtn" class="btn-primary">Send</button>
+        </div>
+    </div>
+    
+    <button id="floatingChatBtn" class="floating-chat-btn">
+        💬 Ask AI
+    </button>
+
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/dashboard.js"></script>
+    <script src="/static/js/chat.js"></script>
+</body>
+</html>

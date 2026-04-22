@@ -1,0 +1,171 @@
+/* 
+   AQInsight Pro - Environmental Scene System (GSAP Driven)
+*/
+
+:root {
+    /* Base Color Variables (Default to Good) */
+    --sky-top: #38bdf8;
+    --sky-bottom: #e0f2fe;
+    --tree-fill: #22c55e;
+    --grass-fill: #16a34a;
+    --mountain-fill: #94a3b8;
+    --smoke-opacity: 0;
+    --transition-speed: 2s ease-in-out;
+}
+
+#dynamic-bg-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    overflow: hidden;
+    background: linear-gradient(to bottom, var(--sky-top) 0%, var(--sky-bottom) 100%);
+    transition: background var(--transition-speed);
+}
+
+/* -----------------------------
+   STATE THEMES (AQI Levels)
+   ----------------------------- */
+.aqi-state-1 {
+    --sky-top: #0ea5e9; --sky-bottom: #e0f2fe;
+    --tree-fill: #22c55e; --grass-fill: #16a34a;
+    --smoke-opacity: 0;
+}
+.aqi-state-2 {
+    --sky-top: #cbd5e1; --sky-bottom: #f8fafc;
+    --tree-fill: #84cc16; --grass-fill: #65a30d;
+    --smoke-opacity: 0;
+}
+.aqi-state-3 {
+    --sky-top: #fdba74; --sky-bottom: #fed7aa;
+    --tree-fill: #ca8a04; --grass-fill: #a16207;
+    --smoke-opacity: 0.15;
+}
+.aqi-state-4 {
+    --sky-top: #7f1d1d; --sky-bottom: #fca5a5;
+    --tree-fill: #a16207; --grass-fill: #713f12;
+    --smoke-opacity: 0.4;
+}
+.aqi-state-5 {
+    --sky-top: #4c1d95; --sky-bottom: #a78bfa;
+    --tree-fill: #451a03; --grass-fill: #292524;
+    --smoke-opacity: 0.7;
+}
+.aqi-state-6 {
+    --sky-top: #1c1917; --sky-bottom: #450a0a;
+    --tree-fill: #1c1917; --grass-fill: #0c0a09;
+    --smoke-opacity: 0.9;
+}
+
+/* Base Layers */
+.env-layer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0; left: 0;
+    pointer-events: none;
+}
+
+/* Mountains */
+.layer-mountains {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%2394a3b8' fill-opacity='1' d='M0,192L48,181.3C96,171,192,149,288,149.3C384,149,480,171,576,192C672,213,768,235,864,224C960,213,1056,171,1152,149.3C1248,128,1344,128,1392,128L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E");
+    background-size: cover; background-position: bottom;
+    bottom: 0; top: auto; height: 40vh;
+    transition: filter var(--transition-speed);
+}
+.aqi-state-3 .layer-mountains { filter: sepia(0.5) brightness(0.8); }
+.aqi-state-4 .layer-mountains { filter: sepia(0.8) brightness(0.6); }
+.aqi-state-5 .layer-mountains { filter: brightness(0.4); }
+.aqi-state-6 .layer-mountains { filter: brightness(0.2); }
+
+/* Grass Foreground and Ground Texture Base */
+.layer-grass {
+    background-color: var(--grass-fill);
+    height: 15vh; bottom: 0; top: auto;
+    transition: background-color var(--transition-speed);
+    display: flex;
+    align-items: flex-end;
+}
+.layer-ground-texture {
+    position: absolute; width: 100%; height: 100%; top: 0; left: 0;
+    pointer-events: none;
+    /* Dry cracked earth svg pattern logic dynamically injected by JS */
+    opacity: 0; transition: opacity var(--transition-speed);
+}
+.layer-flora {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 15vh;
+    pointer-events: none;
+    z-index: 5;
+}
+.flora-element {
+    position: absolute; bottom: -5px; 
+    transform-origin: 50% 100%;
+}
+.bush { z-index: 2; }
+.grass-tuft { z-index: 3; }
+.grass-blade { transform-origin: 50% 100%; }
+
+/* Trees Layout */
+.layer-trees {
+    bottom: 8vh; top: auto; height: 40vh;
+    display: flex; justify-content: space-around; align-items: flex-end;
+}
+.tree-container {
+    width: 200px; height: 300px;
+    position: relative;
+    transform-origin: 50% 100%;
+}
+.tree-container:nth-child(even) { width: 250px; height: 350px; }
+.tree-container:nth-child(3n) { width: 160px; height: 260px; }
+
+/* SVG Tree styling */
+.tree-svg {
+    width: 100%; height: 100%;
+    overflow: visible;
+}
+
+/* Clouds Elements */
+.layer-clouds { width: 100%; height: 100%; }
+.cloud {
+    position: absolute;
+    width: 200px; height: 60px;
+}
+.cloud svg {
+    width: 100%; height: 100%;
+    fill: #ffffff;
+    transition: fill var(--transition-speed);
+}
+.aqi-state-3 .cloud svg { fill: #fed7aa; }
+.aqi-state-4 .cloud svg { fill: #fca5a5; }
+.aqi-state-5 .cloud svg { fill: #6b21a8; }
+.aqi-state-6 .cloud svg { fill: #2b1c1c; }
+
+
+/* Bird Elements */
+.layer-birds { width: 100%; height: 100%; }
+.bird {
+    position: absolute; width: 40px; height: 40px;
+    z-index: 10;
+}
+.bird svg { width: 100%; height: 100%; fill: #1e293b; }
+
+/* Smoke Overlay */
+.layer-smoke {
+    background: url('https://www.transparenttextures.com/patterns/dust.png');
+    opacity: var(--smoke-opacity);
+    mix-blend-mode: multiply;
+    transition: opacity var(--transition-speed);
+    width: 200vw; height: 100vh;
+}
+
+/* Audio Control */
+.audio-control-btn {
+    position: fixed; bottom: 30px; left: 30px;
+    background: rgba(30, 41, 59, 0.8);
+    backdrop-filter: blur(10px); color: white;
+    padding: 12px 18px; border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.1);
+    font-size: 14px; cursor: pointer; z-index: 100;
+}

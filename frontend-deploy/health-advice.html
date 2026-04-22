@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Advice - Personal AQI Health Assistant</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">🌬️ AQInsight</div>
+        <div class="nav-links">
+            <a href="/">Dashboard</a>
+            <a href="/health-advice.html" class="active">Health Advice</a>
+            <a href="/profile.html">Profile</a>
+            <button id="logoutBtn" class="btn-outline">Logout</button>
+        </div>
+    </nav>
+
+    <main class="container">
+        <header class="dashboard-header">
+            <div>
+                <h1>Understanding Air Quality</h1>
+                <p>Comprehensive guide to AQI levels and recommendations</p>
+            </div>
+        </header>
+
+        <div class="advice-grid">
+            <article class="card category-good">
+                <div class="advice-header">
+                    <div class="aqi-range">0 - 50</div>
+                    <h2>Good</h2>
+                </div>
+                <p>Minimal Impact. Air quality is considered satisfactory, and air pollution poses little or no risk.</p>
+                <ul>
+                    <li>✅ Great day for outdoor activities.</li>
+                    <li>✅ Open windows to ventilate your home.</li>
+                </ul>
+            </article>
+
+            <article class="card category-moderate"> <!-- Note: Native level 2 in India is Satisfactory -->
+                <div class="advice-header">
+                    <div class="aqi-range">51 - 100</div>
+                    <h2>Satisfactory</h2>
+                </div>
+                <p>May cause minor breathing discomfort to sensitive people.</p>
+                <ul>
+                    <li>⚠️ sensitive individuals should consider limiting prolonged outdoor exertion.</li>
+                </ul>
+            </article>
+
+            <article class="card category-unhealthy-sensitive"> <!-- Note: Native level 3 in India is Moderate -->
+                <div class="advice-header">
+                    <div class="aqi-range">101 - 200</div>
+                    <h2>Moderate</h2>
+                </div>
+                <p>May cause breathing discomfort to people with lungs, asthma and heart diseases.</p>
+                <ul>
+                    <li>❌ Children and elderly should limit prolonged outdoor exertion.</li>
+                </ul>
+            </article>
+
+            <article class="card category-unhealthy"> <!-- Note: Native level 4 in India is Poor -->
+                <div class="advice-header">
+                    <div class="aqi-range">201 - 300</div>
+                    <h2>Poor</h2>
+                </div>
+                <p>May cause breathing discomfort to most people on prolonged exposure.</p>
+                <ul>
+                    <li>❌ Avoid prolonged outdoor physical activities.</li>
+                    <li>😷 Wear an N95 mask for essential travel.</li>
+                </ul>
+            </article>
+
+            <article class="card category-very-unhealthy"> <!-- Note: Native level 5 in India is Very Poor -->
+                <div class="advice-header">
+                    <div class="aqi-range">301 - 400</div>
+                    <h2>Very Poor</h2>
+                </div>
+                <p>May cause respiratory illness on prolonged exposure. Pronounced effect on people with existing diseases.</p>
+                <ul>
+                    <li>🚫 Avoid all outdoor physical activities.</li>
+                    <li>🏠 Keep windows closed and use an air purifier.</li>
+                </ul>
+            </article>
+
+            <article class="card category-hazardous"> <!-- Note: Native level 6 in India is Severe -->
+                <div class="advice-header">
+                    <div class="aqi-range">401 - 500+</div>
+                    <h2>Severe</h2>
+                </div>
+                <p>Affects healthy people and seriously impacts those with existing diseases. Emergency conditions.</p>
+                <ul>
+                    <li>🚫 Remain indoors and keep activity levels low.</li>
+                    <li>🚪 Ensure air-tightness of the house and use air filtration.</li>
+                </ul>
+            </article>
+        </div>
+    </main>
+
+    <script src="/static/js/auth.js"></script>
+</body>
+</html>

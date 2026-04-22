@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unsubscribed - AQInsight</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .success-container {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+            padding: 20px;
+        }
+        .success-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 500px;
+            width: 100%;
+        }
+        .icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+            display: block;
+        }
+        h1 { margin-bottom: 10px; }
+        p { color: #94a3b8; margin-bottom: 30px; }
+    </style>
+</head>
+<body class="auth-page">
+    <div class="success-container">
+        <div class="success-card">
+            <span class="icon">✅</span>
+            <h1>Successfully Unsubscribed</h1>
+            <p>The email address <strong>{{ email }}</strong> has been removed from our alert list. You will no longer receive automated AQI notifications.</p>
+            <a href="/" class="btn-primary" style="display: inline-block; text-decoration: none;">Return to Dashboard</a>
+        </div>
+    </div>
+</body>
+</html>
