@@ -6,10 +6,14 @@ import time
 import os
 import sys
 import requests
+import pandas as pd
+import math
+import hashlib
+import random
+from datetime import datetime
 from pathlib import Path
 
 # Load environment variables
-# Use Path for more robust path handling across environments
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / '.env')
 
@@ -67,7 +71,6 @@ AQI_MAPPING = {
 # BACKGROUND MONITORING LOGIC
 # ==========================================
 def monitor_aqi_background():
-    # Wait a bit for server to fully start
     time.sleep(5)
     while True:
         try:
@@ -83,16 +86,12 @@ def monitor_aqi_background():
                             if "error" not in data:
                                 city_data = data
                                 checked_cities[city] = city_data
-                                # Save to trend history using new schema
                                 database.save_aqi_reading(city_data['city'], city_data['aqi'], city_data['components'])
 
-                        # Check alert
                         if city in checked_cities:
                             city_data = checked_cities[city]
                             simulated_aqi = city_data['aqi']
                             aqi_level = city_data['level']
-                            
-                            print(f"[Monitor]   - {email}: Current AQI {simulated_aqi} (Threshold: {threshold})")
                             
                             if simulated_aqi >= threshold:
                                 mapping = AQI_MAPPING.get(aqi_level, AQI_MAPPING[5])
@@ -101,13 +100,11 @@ def monitor_aqi_background():
                                     mapping['name'], mapping['rec']
                                 )
                     except Exception as e:
-                        print(f"[Monitor] Error processing alert for {email}: {e}")
+                        print(f"[Monitor ERROR] {e}")
             else:
                 print("[Monitor] No active subscribers found.")
         except Exception as e:
             print(f"[Monitor Global Error] {e}")
-
-        # Wait for 30 minutes
         time.sleep(1800)
 
 if not any(t.name == "AQIMonitor" for t in threading.enumerate()):
@@ -120,8 +117,7 @@ if not any(t.name == "AQIMonitor" for t in threading.enumerate()):
 @app.route('/get_aqi', methods=['GET'])
 def get_aqi_legacy():
     city = request.args.get('city')
-    if not city:
-        return jsonify({"error": "City parameter is required"}), 400
+    if not city: return jsonify({"error": "City parameter is required"}), 400
     data = aqi_fetcher.fetch_aqi_data(city)
     if "error" not in data:
         database.save_aqi_reading(data['city'], data['aqi'], data['components'])
@@ -132,8 +128,7 @@ def get_aqi_legacy():
 def get_aqi_coords_legacy():
     lat = request.args.get('lat')
     lon = request.args.get('lon')
-    if not lat or not lon:
-        return jsonify({"error": "Latitude and longitude are required"}), 400
+    if not lat or not lon: return jsonify({"error": "Latitude and longitude are required"}), 400
     data = aqi_fetcher.fetch_aqi_by_coords(lat, lon)
     if "error" not in data:
         db_city = data.get('city_for_db', data.get('city', 'Unknown'))
@@ -144,17 +139,13 @@ def get_aqi_coords_legacy():
 @app.route('/aqi_trends', methods=['GET'])
 def aqi_trends_legacy():
     city = request.args.get('city', '').lower().strip()
-    if not city:
-        return jsonify({"error": "City parameter is required"}), 400
-    
+    if not city: return jsonify({"error": "City parameter is required"}), 400
     trends = database.get_aqi_trends(city)
-    
     if len(trends) == 0:
         geo = aqi_fetcher.fetch_aqi_data(city)
         if "error" not in geo:
             canonical_city = geo['city'].lower().strip()
             trends = database.get_aqi_trends(canonical_city)
-    
     if len(trends) < 4:
         hist_trends = aqi_fetcher.fetch_historical_aqi(city)
         if isinstance(hist_trends, list) and len(hist_trends) > 0:
@@ -163,122 +154,181 @@ def aqi_trends_legacy():
             merged.extend(trends)
             merged.sort(key=lambda x: x['date'])
             return jsonify(merged)
-            
     return jsonify(trends)
 
 @app.route('/subscribe', methods=['POST'])
 def subscribe():
     data = request.json
-    email = data.get('email')
-    city = data.get('city')
+    email, city = data.get('email'), data.get('city')
     threshold = data.get('threshold', 101)
-    if not email or not city:
-        return jsonify({"success": False, "message": "Email and City are required"}), 400
-    success = database.add_subscription(email, city, threshold)
-    if success:
+    if not email or not city: return jsonify({"success": False, "message": "Email and City are required"}), 400
+    if database.add_subscription(email, city, threshold):
         return jsonify({"success": True, "message": "Successfully subscribed to alerts"})
     return jsonify({"success": False, "message": "Subscription failed"}), 500
 
 @app.route('/get_user_preferences', methods=['GET'])
 def get_user_preferences():
     email = request.args.get('email')
-    if not email:
-        return jsonify({"error": "Email is required"}), 400
-    
+    if not email: return jsonify({"error": "Email is required"}), 400
     subs = database.get_subscriptions()
     for row in subs:
-        if row[0] == email:
-            return jsonify({"city": row[1], "threshold": row[2]})
+        if row[0] == email: return jsonify({"city": row[1], "threshold": row[2]})
     return jsonify({"city": "Visakhapatnam", "threshold": 101})
 
 @app.route('/get_current_aqi', methods=['GET'])
 def get_current_aqi():
     city = request.args.get('city')
-    if not city:
-        return jsonify({"error": "City is required"}), 400
+    if not city: return jsonify({"error": "City is required"}), 400
     data = aqi_fetcher.fetch_aqi_data(city)
-    if "error" not in data:
-        return jsonify(data)
-    return jsonify(data), 500
+    return jsonify(data), (200 if "error" not in data else 500)
 
 @app.route('/predict_aqi', methods=['POST'])
 def predict_aqi():
-    if ml_predict_aqi is None:
-        return jsonify({"error": "Machine Learning module is not available."}), 500
-        
+    if ml_predict_aqi is None: return jsonify({"error": "ML module not found"}), 500
     data = request.json
     try:
         prediction = ml_predict_aqi(
             data['pm25'], data['pm10'], data['no2'], data['co'], 
             data['so2'], data['o3'], data['temperature'], data['humidity']
         )
-        if prediction is None:
-            return jsonify({"error": "ML Model failed to load or process data."}), 500
-        return jsonify({"predicted_aqi": prediction})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({"predicted_aqi": prediction}) if prediction is not None else (jsonify({"error": "ML Model Error"}), 500)
+    except Exception as e: return jsonify({"error": str(e)}), 400
+
+@app.route('/get_historical_aqi', methods=['GET'])
+def get_historical_aqi():
+    city = request.args.get('city')
+    if not city: return jsonify({"error": "City is required"}), 400
+    return jsonify({"city": city, "history": database.get_aqi_trends(city)})
 
 # ==========================================
-# PAGE ROUTES
+# VIZAG FORECAST DATA & LOGIC
 # ==========================================
+VIZAG_AREAS = [
+    'Visakhapatnam', 'Gajuwaka', 'MVP Colony', 'Madhurawada', 'Pendurthi',
+    'Rushikonda', 'Asilmetta', 'Dwaraka Nagar', 'NAD X Road',
+    'Seethammadhara', 'Siripuram', 'Bheemili', 'Anakapalle', 'Simhachalam',
+    'Kancharapalem', 'Akkayyapalem', 'Maharanipeta', 'Jagadamba Centre',
+    'Lawsons Bay Colony', 'Kirlampudi Layout', 'Waltair', 'Daba Gardens',
+    'Allipuram', 'Ram Nagar', 'Pedagantyada', 'Gopalapatnam',
+    'Kommadi', 'Yendada', 'Thatichetlapalem', 'Sagar Nagar',
+    'Chinnamushidiwada', 'Gnanapuram', 'Peda Waltair', 'CBM Compound',
+    'Isukathota', 'PM Palem', 'Hanumanthawaka', 'Kurupam Market',
+    'Seethammapeta', 'Dondaparthy', 'Murali Nagar', 'HB Colony',
+    'Resapuvanipalem', 'Thotagaruvu Peta', 'Nakkavanipalem',
+    'Chinna Waltair', 'Old Town', 'One Town', 'Poorna Market',
+    'Chengal Rao Peta', 'Dabagardens', 'MVP Double Road', 'Steel Plant',
+    'Kurmannapalem', 'Gidijala', 'Adavivaram', 'Jodugullapalem',
+    'Aganampudi', 'Pudimadaka', 'Bhogapuram', 'Parawada',
+    'Sabbavaram', 'Chodavaram', 'Yelamanchili', 'Narsipatnam',
+    'Payakaraopeta', 'Padmanabham', 'Anandapuram', 'Kothavalasa'
+]
+
+VIZAG_DEFAULTS = {
+    'Visakhapatnam': {'mean': 53, 'std': 20, 'drift': -0.9},
+    'Gajuwaka':      {'mean': 53, 'std': 20, 'drift': -0.9},
+    'MVP Colony':    {'mean': 60, 'std': 18, 'drift': -0.5},
+    'Madhurawada':   {'mean': 48, 'std': 15, 'drift': -0.3},
+    'Pendurthi':     {'mean': 72, 'std': 22, 'drift': 0.8},
+    'Rushikonda':    {'mean': 38, 'std': 12, 'drift': -0.6},
+    'Asilmetta':     {'mean': 78, 'std': 24, 'drift': 1.0},
+    'Dwaraka Nagar': {'mean': 82, 'std': 25, 'drift': 1.2},
+    'NAD X Road':    {'mean': 90, 'std': 28, 'drift': 1.5},
+    'Seethammadhara':{'mean': 58, 'std': 16, 'drift': -0.2},
+    'Siripuram':     {'mean': 65, 'std': 18, 'drift': 0.3},
+    'Bheemili':      {'mean': 35, 'std': 10, 'drift': -0.8},
+    'Anakapalle':    {'mean': 88, 'std': 26, 'drift': 1.3},
+    'Simhachalam':   {'mean': 55, 'std': 17, 'drift': -0.4},
+    'Steel Plant':   {'mean': 95, 'std': 30, 'drift': 1.8},
+    'Parawada':      {'mean': 85, 'std': 25, 'drift': 1.4},
+}
+
+def _get_vizag_stats(area):
+    csv_path = BASE_DIR / 'dataset' / 'ap_historical.csv'
+    if csv_path.exists():
+        df = pd.read_csv(csv_path)
+        city_df = df[df['city'] == area]
+        if not city_df.empty: return {'mean': float(city_df['AQI'].mean()), 'std': float(city_df['AQI'].std())}
+    if area in VIZAG_DEFAULTS: return {'mean': VIZAG_DEFAULTS[area]['mean'], 'std': VIZAG_DEFAULTS[area]['std']}
+    h = int(hashlib.md5(area.encode()).hexdigest(), 16)
+    return {'mean': max(25, 53 + (h % 60) - 20), 'std': max(8, 15 + (h % 15))}
+
+@app.route('/forecast_areas', methods=['GET'])
+def forecast_areas(): return jsonify({"areas": VIZAG_AREAS})
+
+@app.route('/vizag_10yr_forecast', methods=['GET'])
+def vizag_10yr_forecast():
+    area = request.args.get('area', 'Visakhapatnam')
+    years = [str(y) for y in range(2026, 2037)]
+    s = _get_vizag_stats(area)
+    base, drift = s['mean'], (VIZAG_DEFAULTS.get(area, {}).get('drift', (s['mean'] - 60) * 0.02))
+    random.seed(f"forecast_{area}")
+    data, curr = [], base
+    for _ in range(len(years)):
+        val = curr + random.uniform(-0.08, 0.08) * curr
+        data.append(int(round(max(0, val))))
+        curr += drift
+    return jsonify({"years": years, "area": area, "forecast": data, "baseline_mean": round(base, 1), "baseline_std": round(s['std'], 1)})
+
+@app.route('/vizag_date_prediction', methods=['GET'])
+def vizag_date_prediction():
+    area, d_str = request.args.get('area'), request.args.get('date')
+    if not area or not d_str: return jsonify({"error": "Missing params"}), 400
+    try: t_date = datetime.strptime(d_str, '%Y-%m-%d')
+    except: return jsonify({"error": "Invalid date"}), 400
+    s = _get_vizag_stats(area)
+    drift = VIZAG_DEFAULTS.get(area, {}).get('drift', (s['mean'] - 60) * 0.02)
+    base_aqi = s['mean'] + (drift * max(0, t_date.year - 2026))
+    random.seed(f"{area}_{d_str}")
+    seasonal = 1.15 if t_date.month in [11, 12, 1, 2] else (0.85 if t_date.month in [6, 7, 8, 9] else 1.0)
+    final_aqi = int(round(max(0, base_aqi * seasonal + random.gauss(0, s['std'] * 0.3))))
+    cat = 'Good' if final_aqi <= 50 else ('Satisfactory' if final_aqi <= 100 else ('Moderate' if final_aqi <= 200 else ('Poor' if final_aqi <= 300 else ('Very Poor' if final_aqi <= 400 else 'Severe'))))
+    return jsonify({"area": area, "date": d_str, "predicted_aqi": final_aqi, "category": cat})
+
+# ==========================================
+# CHAT PROXY & PAGE ROUTES
+# ==========================================
+@app.route('/chat', methods=['POST', 'GET'])
+def chat_proxy():
+    if request.method == 'GET': return jsonify({"status": "Online"})
+    data = request.json
+    api_key = os.getenv('GEMINI_API_KEY')
+    if not api_key: return jsonify({"error": "API Key missing"}), 500
+    prompt = f"User Question: {data.get('message', '')}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key={api_key}"
+    try:
+        resp = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=10)
+        json_data = resp.json()
+        return jsonify({"response": json_data['candidates'][0]['content']['parts'][0]['text']})
+    except Exception as e: return jsonify({"error": str(e)}), 500
+
 @app.route('/')
-def index_root():
-    return render_template('login.html')
+def index_root(): return render_template('login.html')
 
 @app.route('/index.html')
-def index_page():
-    return render_template('index.html')
+def index_page(): return render_template('index.html')
 
 @app.route('/dashboard.html')
-def dashboard_page():
-    return render_template('dashboard.html')
+def dashboard_page(): return render_template('dashboard.html')
 
 @app.route('/login.html')
-def login_page():
-    return render_template('login.html')
+def login_page(): return render_template('login.html')
 
 @app.route('/signup.html')
-def signup_page():
-    return render_template('signup.html')
+def signup_page(): return render_template('signup.html')
 
 @app.route('/profile.html')
-def profile_page():
-    return render_template('profile.html')
+def profile_page(): return render_template('profile.html')
 
 @app.route('/health-advice.html')
-def health_advice_page():
-    return render_template('health-advice.html')
-
-@app.route('/unsubscribe', methods=['POST'])
-def unsubscribe_api():
-    data = request.json
-    email = data.get('email')
-    if not email:
-        return jsonify({"success": False, "message": "Email required"}), 400
-    if database.delete_subscription(email):
-        return jsonify({"success": True, "message": "Unsubscribed successfully."})
-    return jsonify({"success": False, "message": "Unsubscribe failed."}), 500
-
-@app.route('/unsubscribe_confirm', methods=['GET'])
-def unsubscribe_confirm():
-    email = request.args.get('email')
-    if not email: return "No email provided.", 400
-    if database.delete_subscription(email):
-        return render_template('unsubscribe_success.html', email=email)
-    return "Error processing unsubscription.", 500
+def health_advice_page(): return render_template('health-advice.html')
 
 @app.route('/<path:path>')
 def serve_any(path):
-    # Try to find in static folder
-    if (STATIC_DIR / path).exists():
-        return send_from_directory(str(STATIC_DIR), path)
-    # Try to find in templates (for .html links)
-    if path.endswith('.html') and (TEMPLATE_DIR / path).exists():
-        return render_template(path)
+    if (STATIC_DIR / path).exists(): return send_from_directory(str(STATIC_DIR), path)
+    if path.endswith('.html') and (TEMPLATE_DIR / path).exists(): return render_template(path)
     return "Not Found", 404
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8888))
-    # In production, debug should be False
     is_prod = os.environ.get('FLASK_ENV') == 'production' or os.environ.get('RENDER') == 'true'
     app.run(host='0.0.0.0', port=port, debug=not is_prod)
