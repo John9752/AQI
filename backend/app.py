@@ -298,8 +298,15 @@ def chat_proxy():
     try:
         resp = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=10)
         json_data = resp.json()
-        return jsonify({"response": json_data['candidates'][0]['content']['parts'][0]['text']})
-    except Exception as e: return jsonify({"error": str(e)}), 500
+        
+        if 'candidates' in json_data and len(json_data['candidates']) > 0:
+            return jsonify({"response": json_data['candidates'][0]['content']['parts'][0]['text']})
+        elif 'error' in json_data:
+            return jsonify({"error": json_data['error'].get('message', 'AI Error')}), 400
+        else:
+            return jsonify({"error": "AI response was empty or rejected (safety filters?)"}), 400
+    except Exception as e:
+        return jsonify({"error": f"Backend Proxy Error: {str(e)}"}), 500
 
 @app.route('/')
 def index_root(): return render_template('login.html')
