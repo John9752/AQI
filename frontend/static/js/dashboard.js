@@ -353,7 +353,7 @@ async function fetchDashboardData(city) {
             temperature: data.components.temperature || 25,
             humidity: data.components.humidity || 50
         };
-        fetchPrediction(componentsForPredict);
+        // fetchPrediction(componentsForPredict);
         // fetchPrediction removed
         
         // Fetch historical trends using the name hint to ensure DB match
@@ -392,7 +392,7 @@ async function loadDataByCoords(lat, lon) {
             temperature: data.components.temperature || 25,
             humidity: data.components.humidity || 50
         };
-        fetchPrediction(componentsForPredict);
+        // fetchPrediction(componentsForPredict);
         // fetchPrediction removed
         
         // Fetch Trends for the area using the specific location name
