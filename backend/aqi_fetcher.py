@@ -103,10 +103,18 @@ def apply_regional_bias(components, city_name, query_hint=""):
                    ['visakha', 'vizag', 'gajuwaka', 'pendurthi', 'parawada', 'steel plant', 'anakapalle'])
                    
     if is_vizag:
-        calibrated['pm2_5'] *= 1.2
-        calibrated['pm10'] *= 1.1
-        calibrated['no2'] *= 1.2
-        calibrated['so2'] *= 1.2
+        # Check for industrial hotspots
+        is_industrial = any(term in city_lower or term in hint_lower for term in ['malkapuram', 'gajuwaka', 'steel plant', 'parawada'])
+        
+        if is_industrial:
+            calibrated['pm2_5'] *= 2.8
+            calibrated['pm10'] *= 2.2
+        else:
+            calibrated['pm2_5'] *= 2.2
+            calibrated['pm10'] *= 1.8
+        
+        calibrated['no2'] *= 1.5
+        calibrated['so2'] *= 1.5
         
     return calibrated
 
@@ -117,9 +125,9 @@ def apply_ground_calibration(components, country_code, city="", query_hint=""):
     """
     calibrated = components.copy()
     if country_code == "IN" or "india" in city.lower() or "india" in query_hint.lower():
-        calibrated['pm2_5'] *= 2.0
-        calibrated['pm10']  *= 1.8
-        calibrated['no2']   *= 1.2
+        calibrated['pm2_5'] *= 2.5
+        calibrated['pm10']  *= 2.0
+        calibrated['no2']   *= 1.4
     return calibrated
 
 def fetch_historical_aqi(city, days=7):
