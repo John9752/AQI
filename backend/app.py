@@ -12,6 +12,7 @@ import hashlib
 import random
 from datetime import datetime
 from pathlib import Path
+import google.generativeai as genai
 
 # Load environment variables
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -335,44 +336,24 @@ def chat_proxy():
         "Keep responses professional, concise, and focused on safety."
     )
     
-    payload = {
-        "contents": [
-            {
-                "role": "user",
-                "parts": [{"text": f"{system_prompt}\n\nUser Question: {user_query}"}]
-            }
-        ],
-        "generationConfig": {"temperature": 0.5, "maxOutputTokens": 400}
-    }
-    
-    # Try multiple models in order of capability/stability
-    # Using v1 stable API instead of v1beta
-    models = ["gemini-1.5-flash", "gemini-pro"]
-    last_error = "Unknown error"
-    
-    for model_name in models:
-        url = f"https://generativelanguage.googleapis.com/v1/models/{model_name}:generateContent?key={api_key}"
+    try:
+        genai.configure(api_key=api_key)
+        
+        # Try Flash first
+        model = genai.GenerativeModel('gemini-1.5-flash')
         try:
-            resp = requests.post(url, json=payload, timeout=20)
-            json_data = resp.json()
-            
-            if resp.status_code == 200 and 'candidates' in json_data:
-                return jsonify({"response": json_data['candidates'][0]['content']['parts'][0]['text']})
-            
-            # If high demand or quota reached, wait 1s and try next model
-            if resp.status_code in [429, 503]:
-                last_error = "Service is currently over capacity"
-                time.sleep(1)
-                continue
-                
-            if 'error' in json_data:
-                msg = json_data['error'].get('message', 'AI Error')
-                last_error = f"{model_name}: {msg}"
+            response = model.generate_content(f"{system_prompt}\n\nUser Question: {user_query}")
+            return jsonify({"response": response.text})
         except Exception as e:
-            last_error = str(e)
-            continue
+            # If high demand, try Flash 8B (more available)
+            if "high demand" in str(e).lower() or "429" in str(e):
+                model_8b = genai.GenerativeModel('gemini-1.5-flash-8b')
+                response = model_8b.generate_content(f"{system_prompt}\n\nUser Question: {user_query}")
+                return jsonify({"response": response.text})
+            raise e
             
-    return jsonify({"error": f"AI Assistant is currently busy. {last_error}. Please try again."}), 503
+    except Exception as e:
+        return jsonify({"error": f"AI Assistant currently busy. Please try again in 30 seconds."}), 503
 
 @app.route('/')
 def index_root(): return render_template('login.html')
