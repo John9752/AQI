@@ -346,11 +346,12 @@ def chat_proxy():
     }
     
     # Try multiple models in order of capability/stability
-    models = ["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro"]
+    # Using v1 stable API instead of v1beta
+    models = ["gemini-1.5-flash", "gemini-pro"]
     last_error = "Unknown error"
     
     for model_name in models:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1/models/{model_name}:generateContent?key={api_key}"
         try:
             resp = requests.post(url, json=payload, timeout=20)
             json_data = resp.json()
@@ -358,18 +359,20 @@ def chat_proxy():
             if resp.status_code == 200 and 'candidates' in json_data:
                 return jsonify({"response": json_data['candidates'][0]['content']['parts'][0]['text']})
             
-            # If high demand or quota reached, continue to next model
+            # If high demand or quota reached, wait 1s and try next model
             if resp.status_code in [429, 503]:
-                last_error = "Model busy or high demand"
+                last_error = "Service is currently over capacity"
+                time.sleep(1)
                 continue
                 
             if 'error' in json_data:
-                last_error = json_data['error'].get('message', 'AI Error')
+                msg = json_data['error'].get('message', 'AI Error')
+                last_error = f"{model_name}: {msg}"
         except Exception as e:
             last_error = str(e)
             continue
             
-    return jsonify({"error": f"AI Service Busy: {last_error}. Please try again."}), 503
+    return jsonify({"error": f"AI Assistant is currently busy. {last_error}. Please try again."}), 503
 
 @app.route('/')
 def index_root(): return render_template('login.html')
