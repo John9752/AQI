@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const profileCity = document.getElementById('profileCity');
     const profileThreshold = document.getElementById('profileThreshold');
     const saveProfileBtn = document.getElementById('saveProfileBtn');
+    const disableAlertsBtn = document.getElementById('disableAlertsBtn');
     const alertContainer = document.getElementById('alertContainer');
 
     // Make sure we have the backend base link via the auth.js global variables
@@ -89,8 +90,44 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error(error);
             showAlert("Failed to reach Python backend.");
         } finally {
-            saveProfileBtn.innerText = "Sync Preferences to Database";
+            saveProfileBtn.innerText = "Enable & Sync Hourly Alerts";
             saveProfileBtn.disabled = false;
+        }
+    });
+
+    // 4. Disable Alerts Logic
+    disableAlertsBtn.addEventListener('click', async () => {
+        if (!userEmailAddress) {
+            showAlert("Please wait for authentication to load.");
+            return;
+        }
+
+        if (!confirm("Are you sure you want to stop all mail alerts? You can re-enable them anytime.")) {
+            return;
+        }
+
+        disableAlertsBtn.innerText = "Removing...";
+        disableAlertsBtn.disabled = true;
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/unsubscribe`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: userEmailAddress })
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                showAlert("Mail alerts have been disabled. You will no longer receive hourly updates.", true);
+            } else {
+                showAlert(result.message);
+            }
+        } catch (error) {
+            console.error(error);
+            showAlert("Failed to reach Python backend.");
+        } finally {
+            disableAlertsBtn.innerText = "Disable Mail Alerts";
+            disableAlertsBtn.disabled = false;
         }
     });
 });

@@ -25,8 +25,9 @@ def send_aqi_alert(recipient_email, city, aqi, status, recommendation):
         # Determine color for the email (optional HTML styling)
         color = "#ef4444" if aqi > 200 else "#f97316"
         
-        # Construct unsubscribe URL
-        unsubscribe_url = f"http://192.168.31.174:8888/unsubscribe_confirm?email={recipient_email}"
+        # Construct unsubscribe URL - using a dynamic base if possible, otherwise default
+        host = os.getenv("BACKEND_URL", "http://localhost:8888")
+        unsubscribe_url = f"{host}/unsubscribe?email={recipient_email}"
         
         body = f"""
         <html>
@@ -73,6 +74,77 @@ def send_aqi_alert(recipient_email, city, aqi, status, recommendation):
         return True
     except Exception as e:
         print(f"Failed to send email: {e}")
+        return False
+
+def send_current_aqi_email(recipient_email, city, city_data):
+    """
+    Sends an immediate email with the current AQI details upon subscription or manual trigger.
+    """
+    try:
+        aqi = city_data['aqi']
+        category = city_data['category']
+        health_message = city_data['health_message']
+        
+        subject = f"🔔 AQInsight: Immediate AQI Update for {city}"
+        
+        # Color matching
+        color = "#10b981" # Good
+        if aqi > 300: color = "#7f1d1d" # Severe
+        elif aqi > 200: color = "#ef4444" # Very Poor/Poor
+        elif aqi > 100: color = "#f97316" # Moderate
+        elif aqi > 50: color = "#eab308" # Satisfactory
+        
+        host = os.getenv("BACKEND_URL", "http://localhost:8888")
+        unsubscribe_url = f"{host}/unsubscribe?email={recipient_email}"
+        
+        body = f"""
+        <html>
+        <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #1e293b; background-color: #f8fafc; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                <div style="background-color: {color}; color: white; padding: 30px; text-align: center;">
+                    <h2 style="margin: 0;">Current Air Quality in {city}</h2>
+                    <p style="opacity: 0.9; margin-top: 5px;">Alerts successfully enabled!</p>
+                </div>
+                <div style="padding: 30px; text-align: center;">
+                    <div style="display: inline-block; background: #f1f5f9; padding: 20px 40px; border-radius: 12px;">
+                        <span style="font-size: 48px; font-weight: 800; color: {color};">{aqi}</span><br>
+                        <span style="font-size: 20px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">{category}</span>
+                    </div>
+                    
+                    <div style="margin-top: 25px; padding: 20px; background: #fffbeb; border-left: 4px solid #f59e0b; text-align: left;">
+                        <p style="margin: 0; font-weight: 600; color: #92400e;">Health Advice:</p>
+                        <p style="margin: 5px 0 0 0; color: #b45309;">{health_message}</p>
+                    </div>
+
+                    <p style="margin-top: 30px; font-size: 14px; color: #64748b;">
+                        You will receive an automated update email every hour as long as these alerts are enabled.
+                    </p>
+                    
+                    <div style="margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 20px; font-size: 12px; color: #94a3b8;">
+                        <p>Tracked City: {city} | Time: {datetime.datetime.now().strftime('%H:%M')}</p>
+                        <p><a href="{unsubscribe_url}" style="color: #3b82f6; text-decoration: none;">Disable these alerts</a></p>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        msg = MIMEMultipart()
+        msg['From'] = SENDER_EMAIL
+        msg['To'] = recipient_email
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'html'))
+
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SENDER_EMAIL, SENDER_PASSWORD)
+            server.send_message(msg)
+            
+        print(f"Immediate AQI email sent to {recipient_email}")
+        return True
+    except Exception as e:
+        print(f"Failed to send immediate email: {e}")
         return False
 
 def send_welcome_email(recipient_email, recipient_name):

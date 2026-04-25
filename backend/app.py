@@ -93,19 +93,19 @@ def monitor_aqi_background():
                             simulated_aqi = city_data['aqi']
                             aqi_level = city_data['level']
                             
-                            if simulated_aqi >= threshold:
-                                mapping = AQI_MAPPING.get(aqi_level, AQI_MAPPING[5])
-                                email_service.send_aqi_alert(
-                                    email, city, simulated_aqi, 
-                                    mapping['name'], mapping['rec']
-                                )
+                            mapping = AQI_MAPPING.get(aqi_level, AQI_MAPPING[5])
+                            # Send hourly update regardless of threshold (as per user request "once an hour")
+                            email_service.send_aqi_alert(
+                                email, city, simulated_aqi, 
+                                mapping['name'], mapping['rec']
+                            )
                     except Exception as e:
                         print(f"[Monitor ERROR] {e}")
             else:
                 print("[Monitor] No active subscribers found.")
         except Exception as e:
             print(f"[Monitor Global Error] {e}")
-        time.sleep(1800)
+        time.sleep(3600) # Hourly interval as requested
 
 if not any(t.name == "AQIMonitor" for t in threading.enumerate()):
     monitor_thread = threading.Thread(target=monitor_aqi_background, name="AQIMonitor", daemon=True)
@@ -163,8 +163,27 @@ def subscribe():
     threshold = data.get('threshold', 101)
     if not email or not city: return jsonify({"success": False, "message": "Email and City are required"}), 400
     if database.add_subscription(email, city, threshold):
-        return jsonify({"success": True, "message": "Successfully subscribed to alerts"})
+        # Send immediate current AQI email
+        try:
+            city_data = aqi_fetcher.fetch_aqi_data(city)
+            if "error" not in city_data:
+                email_service.send_current_aqi_email(email, city, city_data)
+        except Exception as e:
+            print(f"Failed to send immediate alert: {e}")
+            
+        return jsonify({"success": True, "message": "Successfully subscribed to hourly alerts"})
     return jsonify({"success": False, "message": "Subscription failed"}), 500
+
+@app.route('/unsubscribe', methods=['GET', 'POST'])
+def unsubscribe():
+    email = request.args.get('email') or (request.json.get('email') if request.is_json else None)
+    if not email: return jsonify({"success": False, "message": "Email is required"}), 400
+    
+    if database.delete_subscription(email):
+        if request.method == 'GET':
+            return "<h1>Successfully Unsubscribed</h1><p>You will no longer receive hourly AQI alerts.</p>"
+        return jsonify({"success": True, "message": "Successfully unsubscribed from alerts"})
+    return jsonify({"success": False, "message": "Unsubscribe failed"}), 500
 
 @app.route('/get_user_preferences', methods=['GET'])
 def get_user_preferences():
