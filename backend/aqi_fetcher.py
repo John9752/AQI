@@ -24,6 +24,9 @@ def fetch_waqi_data(city):
         search_resp = requests.get(search_url).json()
         
         if search_resp.get('status') != 'ok' or not search_resp.get('data'):
+            # Fallback search: if locality fails, try the main city name
+            if "Visakhapatnam" not in city:
+                return fetch_waqi_data(f"{city}, Visakhapatnam")
             return None
             
         # Get the first station that has an actual AQI value (ignore inactive stations)
@@ -201,15 +204,15 @@ def apply_regional_bias(components, city_name, query_hint=""):
         is_industrial = any(term in city_lower or term in hint_lower for term in ['malkapuram', 'gajuwaka', 'steel plant', 'parawada'])
         
         if is_industrial:
-            calibrated['pm2_5'] *= 2.5
-            calibrated['pm10'] *= 2.2
-            calibrated['so2'] *= 2.0
-            calibrated['no2'] *= 1.8
+            calibrated['pm2_5'] *= 4.5
+            calibrated['pm10'] *= 3.5
+            calibrated['so2'] *= 2.5
+            calibrated['no2'] *= 2.2
         else:
-            calibrated['pm2_5'] *= 1.6
-            calibrated['pm10'] *= 1.5
-            calibrated['no2'] *= 1.4
-            calibrated['so2'] *= 1.4
+            calibrated['pm2_5'] *= 3.2
+            calibrated['pm10'] *= 2.8
+            calibrated['no2'] *= 1.8
+            calibrated['so2'] *= 1.8
         
     return calibrated
 
@@ -220,9 +223,9 @@ def apply_ground_calibration(components, country_code, city="", query_hint=""):
     """
     calibrated = components.copy()
     if country_code == "IN" or "india" in city.lower() or "india" in query_hint.lower():
-        calibrated['pm2_5'] *= 2.0
-        calibrated['pm10']  *= 1.8
-        calibrated['no2']   *= 1.2
+        calibrated['pm2_5'] *= 3.2
+        calibrated['pm10']  *= 2.5
+        calibrated['no2']   *= 1.5
     return calibrated
 
 def fetch_historical_aqi(city, days=7):
