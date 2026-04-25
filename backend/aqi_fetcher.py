@@ -192,11 +192,11 @@ def apply_regional_bias(components, city_name, query_hint=""):
         is_industrial = any(term in city_lower or term in hint_lower for term in ['malkapuram', 'gajuwaka', 'steel plant', 'parawada'])
         
         if is_industrial:
-            calibrated['pm2_5'] *= 2.8
-            calibrated['pm10'] *= 2.2
+            calibrated['pm2_5'] *= 1.8
+            calibrated['pm10'] *= 1.5
         else:
-            calibrated['pm2_5'] *= 2.2
-            calibrated['pm10'] *= 1.8
+            calibrated['pm2_5'] *= 1.2
+            calibrated['pm10'] *= 1.1
         
         calibrated['no2'] *= 1.5
         calibrated['so2'] *= 1.5
