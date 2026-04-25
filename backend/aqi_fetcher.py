@@ -26,8 +26,11 @@ def fetch_waqi_data(city):
         if search_resp.get('status') != 'ok' or not search_resp.get('data'):
             return None
             
-        # Get the first/best station
-        station_uid = search_resp['data'][0]['uid']
+        # Get the first station that has an actual AQI value (ignore inactive stations)
+        active_stations = [s for s in search_resp['data'] if s.get('aqi') and s.get('aqi') != '-']
+        if not active_stations:
+            return None
+        station_uid = active_stations[0]['uid']
         
         # 2. Fetch the actual feed for this station
         feed_url = f"https://api.waqi.info/feed/@{station_uid}/?token={WAQI_TOKEN}"
@@ -194,10 +197,19 @@ def apply_regional_bias(components, city_name, query_hint=""):
                    ['visakha', 'vizag', 'gajuwaka', 'pendurthi', 'parawada', 'steel plant', 'anakapalle'])
                    
     if is_vizag:
-        calibrated['pm2_5'] *= 1.2
-        calibrated['pm10'] *= 1.1
-        calibrated['no2'] *= 1.2
-        calibrated['so2'] *= 1.2
+        # Higher bias for known industrial/construction zones in Vizag
+        is_industrial = any(term in city_lower or term in hint_lower for term in ['malkapuram', 'gajuwaka', 'steel plant', 'parawada'])
+        
+        if is_industrial:
+            calibrated['pm2_5'] *= 2.5
+            calibrated['pm10'] *= 2.2
+            calibrated['so2'] *= 2.0
+            calibrated['no2'] *= 1.8
+        else:
+            calibrated['pm2_5'] *= 1.6
+            calibrated['pm10'] *= 1.5
+            calibrated['no2'] *= 1.4
+            calibrated['so2'] *= 1.4
         
     return calibrated
 
