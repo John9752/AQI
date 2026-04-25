@@ -8,6 +8,98 @@ from dotenv import load_dotenv
 load_dotenv()
 
 API_KEY = os.getenv("OPENWEATHER_API_KEY")
+WAQI_TOKEN = os.getenv("WAQI_TOKEN", "demo")
+
+def fetch_waqi_data(city):
+    """
+    Fetches real-time AQI and pollutant data from the WAQI (aqicn.org) API.
+    This provides actual station-level data which is much more accurate 
+    for ground-level readings in cities like Visakhapatnam.
+    """
+    try:
+        if not WAQI_TOKEN: return None
+        
+        # 1. Search for the city to get the best station feed
+        search_url = f"https://api.waqi.info/search/?keyword={city}&token={WAQI_TOKEN}"
+        search_resp = requests.get(search_url).json()
+        
+        if search_resp.get('status') != 'ok' or not search_resp.get('data'):
+            return None
+            
+        # Get the first/best station
+        station_uid = search_resp['data'][0]['uid']
+        
+        # 2. Fetch the actual feed for this station
+        feed_url = f"https://api.waqi.info/feed/@{station_uid}/?token={WAQI_TOKEN}"
+        feed_resp = requests.get(feed_url).json()
+        
+        if feed_resp.get('status') != 'ok':
+            return None
+            
+        data = feed_resp['data']
+        iaqi = data.get('iaqi', {})
+        
+        # Map WAQI iaqi to our internal components format
+        # WAQI values are generally raw concentrations in ug/m3 or mg/m3
+        components = {
+            'pm2_5': iaqi.get('pm25', {}).get('v', 0),
+            'pm10': iaqi.get('pm10', {}).get('v', 0),
+            'no2': iaqi.get('no2', {}).get('v', 0),
+            'so2': iaqi.get('so2', {}).get('v', 0),
+            'co': iaqi.get('co', {}).get('v', 0) * 1000.0 if iaqi.get('co', {}).get('v', 0) < 50 else iaqi.get('co', {}).get('v', 0), # Guessing mg/m3 -> ug/m3 for CO if very small
+            'o3': iaqi.get('o3', {}).get('v', 0),
+            'nh3': iaqi.get('nh3', {}).get('v', 0)
+        }
+        
+        return {
+            "city": data.get('city', {}).get('name', city),
+            "aqi": data.get('aqi', 0),
+            "components": components,
+            "coordinates": {
+                "lat": data.get('city', {}).get('geo', [0, 0])[0],
+                "lon": data.get('city', {}).get('geo', [0, 0])[1]
+            },
+            "source": f"Station: {data.get('city', {}).get('name', 'Unknown')} (via WAQI)"
+        }
+    except Exception as e:
+        print(f"[WAQI Error] {e}")
+        return None
+
+def fetch_waqi_by_coords(lat, lon):
+    """
+    Fetches the nearest station data based on coordinates using WAQI API.
+    """
+    try:
+        url = f"https://api.waqi.info/feed/geo:{lat};{lon}/?token={WAQI_TOKEN}"
+        resp = requests.get(url).json()
+        
+        if resp.get('status') != 'ok':
+            return None
+            
+        data = resp['data']
+        iaqi = data.get('iaqi', {})
+        
+        components = {
+            'pm2_5': iaqi.get('pm25', {}).get('v', 0),
+            'pm10': iaqi.get('pm10', {}).get('v', 0),
+            'no2': iaqi.get('no2', {}).get('v', 0),
+            'so2': iaqi.get('so2', {}).get('v', 0),
+            'co': iaqi.get('co', {}).get('v', 0) * 1000.0 if iaqi.get('co', {}).get('v', 0) < 50 else iaqi.get('co', {}).get('v', 0),
+            'o3': iaqi.get('o3', {}).get('v', 0),
+            'nh3': iaqi.get('nh3', {}).get('v', 0)
+        }
+        
+        return {
+            "city": data.get('city', {}).get('name', 'Selected Area'),
+            "city_for_db": data.get('city', {}).get('name', 'Near Station'),
+            "aqi": data.get('aqi', 0),
+            "components": components,
+            "coordinates": {"lat": lat, "lon": lon},
+            "source": f"Nearest Station: {data.get('city', {}).get('name')} (WAQI)"
+        }
+    except Exception as e:
+        print(f"[WAQI Coords Error] {e}")
+        return None
 
 def apply_local_variance(lat, lon, components):
     """
@@ -188,7 +280,27 @@ def fetch_aqi_data(city):
         return {"error": "OPENWEATHER_API_KEY is missing in backend environment"}
 
     try:
-        # 1. Geocoding with Smart Fallbacks
+        # 1. NEW: Try WAQI (Station Data) first as it is much more accurate
+        waqi_data = fetch_waqi_data(city)
+        if waqi_data:
+            # Still apply CPCB standard to the raw components for consistency with Indian laws
+            naqi_data = calculate_indian_aqi(waqi_data['components'])
+            
+            return {
+                "city": waqi_data['city'],
+                "requested_name": city,
+                "aqi": naqi_data["aqi"], # Use our CPCB aqi
+                "level": naqi_data["level"],
+                "category": naqi_data["category"],
+                "health_message": naqi_data["health_message"],
+                "dominant_pollutant": naqi_data["dominant_pollutant"],
+                "components": waqi_data['components'],
+                "coordinates": waqi_data['coordinates'],
+                "source": waqi_data['source'],
+                "openweather_api_aqi_level": None # Not using OWM
+            }
+
+        # 2. Geocoding with Smart Fallbacks (FOR OWM FALLBACK)
         search_terms = []
         search_terms.append(city)
         if "," not in city:
@@ -282,7 +394,25 @@ def fetch_aqi_by_coords(lat, lon):
         return {"error": "OPENWEATHER_API_KEY is missing in backend environment"}
 
     try:
-        # Reverse Geocoding
+        # 1. NEW: Try WAQI (Station Data) first
+        waqi_data = fetch_waqi_by_coords(lat, lon)
+        if waqi_data:
+            naqi_data = calculate_indian_aqi(waqi_data['components'])
+            return {
+                "city_for_db": waqi_data['city_for_db'],
+                "city": waqi_data['city'],
+                "aqi": naqi_data["aqi"],
+                "level": naqi_data["level"],
+                "category": naqi_data["category"],
+                "health_message": naqi_data["health_message"],
+                "dominant_pollutant": naqi_data["dominant_pollutant"],
+                "components": waqi_data['components'],
+                "coordinates": {"lat": lat, "lon": lon},
+                "source": waqi_data['source'],
+                "openweather_api_aqi_level": None
+            }
+
+        # 2. Reverse Geocoding (FOR OWM FALLBACK)
         geo_url = f"https://api.openweathermap.org/geo/1.0/reverse?lat={lat}&lon={lon}&limit=1&appid={API_KEY}"
         geo_data = requests.get(geo_url).json()
         location_name = "Unknown Location"
