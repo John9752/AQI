@@ -327,20 +327,48 @@ def chat_proxy():
     data = request.json
     api_key = os.getenv('GEMINI_API_KEY')
     if not api_key: return jsonify({"error": "API Key missing"}), 500
-    prompt = f"User Question: {data.get('message', '')}"
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
-    try:
-        resp = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=30)
-        json_data = resp.json()
-        
-        if 'candidates' in json_data and len(json_data['candidates']) > 0:
-            return jsonify({"response": json_data['candidates'][0]['content']['parts'][0]['text']})
-        elif 'error' in json_data:
-            return jsonify({"error": json_data['error'].get('message', 'AI Error')}), 400
-        else:
-            return jsonify({"error": "AI response was empty or rejected (safety filters?)"}), 400
-    except Exception as e:
-        return jsonify({"error": f"Backend Proxy Error: {str(e)}"}), 500
+    
+    user_query = data.get('message', '')
+    system_prompt = (
+        "You are the 'AQInsight Pro Health Assistant', an expert in air quality and respiratory health. "
+        "Provide clear, actionable medical and practical precautions based on the user's AQI context. "
+        "Keep responses professional, concise, and focused on safety."
+    )
+    
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": f"{system_prompt}\n\nUser Question: {user_query}"}]
+            }
+        ],
+        "generationConfig": {"temperature": 0.5, "maxOutputTokens": 400}
+    }
+    
+    # Try multiple models in order of capability/stability
+    models = ["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-2.0-flash-exp"]
+    last_error = "Unknown error"
+    
+    for model_name in models:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+        try:
+            resp = requests.post(url, json=payload, timeout=20)
+            json_data = resp.json()
+            
+            if resp.status_code == 200 and 'candidates' in json_data:
+                return jsonify({"response": json_data['candidates'][0]['content']['parts'][0]['text']})
+            
+            # If high demand or quota reached, continue to next model
+            if resp.status_code in [429, 503] or "high demand" in str(json_data).lower():
+                continue
+                
+            if 'error' in json_data:
+                last_error = json_data['error'].get('message', 'AI Error')
+        except Exception as e:
+            last_error = str(e)
+            continue
+            
+    return jsonify({"error": f"AI Service Busy: {last_error}. Please try again in a few moments."}), 503
 
 @app.route('/')
 def index_root(): return render_template('login.html')
