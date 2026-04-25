@@ -346,7 +346,7 @@ def chat_proxy():
     }
     
     # Try multiple models in order of capability/stability
-    models = ["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-2.0-flash-exp"]
+    models = ["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro"]
     last_error = "Unknown error"
     
     for model_name in models:
@@ -359,7 +359,8 @@ def chat_proxy():
                 return jsonify({"response": json_data['candidates'][0]['content']['parts'][0]['text']})
             
             # If high demand or quota reached, continue to next model
-            if resp.status_code in [429, 503] or "high demand" in str(json_data).lower():
+            if resp.status_code in [429, 503]:
+                last_error = "Model busy or high demand"
                 continue
                 
             if 'error' in json_data:
@@ -368,7 +369,7 @@ def chat_proxy():
             last_error = str(e)
             continue
             
-    return jsonify({"error": f"AI Service Busy: {last_error}. Please try again in a few moments."}), 503
+    return jsonify({"error": f"AI Service Busy: {last_error}. Please try again."}), 503
 
 @app.route('/')
 def index_root(): return render_template('login.html')
