@@ -206,11 +206,26 @@ def predict_aqi():
     if ml_predict_aqi is None: return jsonify({"error": "ML module not found"}), 500
     data = request.json
     try:
-        prediction = ml_predict_aqi(
+        result = ml_predict_aqi(
             data['pm25'], data['pm10'], data['no2'], data['co'], 
             data['so2'], data['o3'], data['temperature'], data['humidity']
         )
-        return jsonify({"predicted_aqi": prediction}) if prediction is not None else (jsonify({"error": "ML Model Error"}), 500)
+        if result is not None:
+            # Load accuracy metadata
+            accuracy = 0
+            try:
+                metadata_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'model', 'metadata.json')
+                if os.path.exists(metadata_path):
+                    with open(metadata_path, 'r') as f:
+                        meta = json.load(f)
+                        accuracy = meta.get('r2_score', 0) * 100
+            except Exception: pass
+            
+            return jsonify({
+                "predicted_aqi": result,
+                "accuracy": round(accuracy, 2)
+            })
+        return jsonify({"error": "Prediction failed"}), 500
     except Exception as e: return jsonify({"error": str(e)}), 400
 
 @app.route('/get_historical_aqi', methods=['GET'])

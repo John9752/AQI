@@ -353,6 +353,7 @@ async function fetchDashboardData(city) {
             temperature: data.components.temperature || 25,
             humidity: data.components.humidity || 50
         };
+        fetchPrediction(componentsForPredict);
         // fetchPrediction removed
         
         // Fetch historical trends using the name hint to ensure DB match
@@ -391,6 +392,7 @@ async function loadDataByCoords(lat, lon) {
             temperature: data.components.temperature || 25,
             humidity: data.components.humidity || 50
         };
+        fetchPrediction(componentsForPredict);
         // fetchPrediction removed
         
         // Fetch Trends for the area using the specific location name
@@ -507,7 +509,41 @@ function showAlert(message) {
     setTimeout(() => { alertContainer.innerHTML = ''; }, 5000);
 }
 
+async function fetchPrediction(components) {
+    const aiPredictionDisplay = document.getElementById('aiPredictionValue'); // dashboard.html
+    const accuracyDisplay = document.getElementById('modelAccuracy'); // dashboard.html
+    const tomorrowAqiDisplay = document.getElementById('tomorrowAqi'); // index.html
+    
+    if (aiPredictionDisplay) aiPredictionDisplay.textContent = "Calculating...";
+    if (tomorrowAqiDisplay) tomorrowAqiDisplay.textContent = "Calculating...";
 
+    try {
+        const response = await fetch(`${API_BASE_URL}/predict_aqi`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(components)
+        });
+        const result = await response.json();
+        
+        if (result.predicted_aqi !== undefined) {
+            const val = Math.round(result.predicted_aqi);
+            if (aiPredictionDisplay) aiPredictionDisplay.textContent = `${val} AQI`;
+            if (tomorrowAqiDisplay) tomorrowAqiDisplay.textContent = `${val} AQI`;
+            if (accuracyDisplay) {
+                accuracyDisplay.textContent = `Model Accuracy: ${result.accuracy}%`;
+                accuracyDisplay.style.display = 'block';
+            }
+        } else {
+            if (aiPredictionDisplay) aiPredictionDisplay.textContent = "Unavailable";
+            if (tomorrowAqiDisplay) tomorrowAqiDisplay.textContent = "Unavailable";
+            console.warn("Prediction error:", result.error);
+        }
+    } catch (error) {
+        if (aiPredictionDisplay) aiPredictionDisplay.textContent = "Error";
+        if (tomorrowAqiDisplay) tomorrowAqiDisplay.textContent = "Error";
+        console.error("Prediction fetch error:", error);
+    }
+}
 
 async function loadVizag10YrForecast(area) {
     if (!area) area = 'Visakhapatnam';

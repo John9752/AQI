@@ -1,9 +1,12 @@
 import pandas as pd
 import numpy as np
+from datetime import datetime
 from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
 from sklearn.ensemble import RandomForestRegressor
+from xgboost import XGBRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.preprocessing import StandardScaler
+import json
 import joblib
 import os
 
@@ -53,12 +56,12 @@ if __name__ == "__main__":
     # ==========================================
     print("\n--- Tuning Model (Grid Search) ---")
     param_grid = {
-        'n_estimators': [50, 100],
-        'max_depth': [None, 10, 20],
-        'min_samples_split': [2, 5]
+        'n_estimators': [100, 200],
+        'max_depth': [3, 5, 7],
+        'learning_rate': [0.01, 0.1]
     }
-    rf = RandomForestRegressor(random_state=42)
-    grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=3, n_jobs=-1, scoring='r2')
+    xgb = XGBRegressor(random_state=42, objective='reg:squarederror')
+    grid_search = GridSearchCV(estimator=xgb, param_grid=param_grid, cv=3, n_jobs=-1, scoring='r2')
     grid_search.fit(X_train, y_train)
     
     best_model = grid_search.best_estimator_
@@ -89,7 +92,18 @@ if __name__ == "__main__":
         
     joblib.dump(best_model, MODEL_NAME)
     joblib.dump(scaler, SCALER_NAME)
-    print(f"\nModel & Scaler saved successfully.")
+    
+    # Save metadata for UI
+    metadata = {
+        "r2_score": float(r2),
+        "mae": float(mae),
+        "cv_accuracy": float(cv_scores.mean()),
+        "last_trained": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    with open(os.path.join(os.path.dirname(MODEL_NAME), 'metadata.json'), 'w') as f:
+        json.dump(metadata, f)
+        
+    print(f"\nModel, Scaler & Metadata saved successfully.")
 
 # ==========================================
 # 6. PRODUCTION PREDICTION FUNCTION
