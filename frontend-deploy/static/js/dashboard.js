@@ -425,8 +425,11 @@ async function fetchTrendData(city) {
 }
 
 function updateUI(data) {
-    // Extract country from location string (e.g., "Visakhapatnam, IN")
-    const isIndia = data.city.includes(', IN');
+    // Detect India to use CPCB standard instead of US EPA
+    const isIndia = data.city.toLowerCase().includes(', in') || 
+                    data.city.toLowerCase().includes(', india') || 
+                    data.city.toLowerCase().includes('visakhapatnam');
+                    
     const mappingProfile = isIndia ? AQI_MAPPING['IN'] : AQI_MAPPING['INTL'];
     const config = mappingProfile[data.level] || mappingProfile[1];
     
