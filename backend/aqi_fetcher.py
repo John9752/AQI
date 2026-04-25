@@ -285,11 +285,15 @@ def fetch_aqi_data(city):
         # 1. Try WAQI first (Real-time stations)
         waqi_data = fetch_waqi_data(city)
         if waqi_data:
+            # Use the WAQI provided AQI index directly as users expect it to match sensor websites
+            # but still use CPCB for categories and health messages
+            raw_aqi = int(waqi_data['aqi'])
             naqi_data = calculate_indian_aqi(waqi_data['components'])
+            
             return {
                 "city": waqi_data['city'],
                 "requested_name": city,
-                "aqi": naqi_data["aqi"],
+                "aqi": raw_aqi,
                 "level": naqi_data["level"],
                 "category": naqi_data["category"],
                 "health_message": naqi_data["health_message"],
@@ -397,11 +401,12 @@ def fetch_aqi_by_coords(lat, lon):
         # 1. Try WAQI for the selected coordinates
         waqi_data = fetch_waqi_by_coords(lat, lon)
         if waqi_data:
+            raw_aqi = int(waqi_data['aqi'])
             naqi_data = calculate_indian_aqi(waqi_data['components'])
             return {
                 "city_for_db": waqi_data['city_for_db'],
                 "city": waqi_data['city'],
-                "aqi": naqi_data["aqi"],
+                "aqi": raw_aqi,
                 "level": naqi_data["level"],
                 "category": naqi_data["category"],
                 "health_message": naqi_data["health_message"],
