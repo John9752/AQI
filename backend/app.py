@@ -358,8 +358,13 @@ def chat_proxy():
             print(f"[AUTO-DETECT] Found {len(available_models)} models: {available_models}")
             
             if available_models:
-                # Preferred order
-                prefs = ['models/gemini-1.5-flash', 'models/gemini-1.5-flash-latest', 'models/gemini-1.0-pro', 'models/gemini-pro']
+                # Preferred order - added 1.5-flash-8b which is often more available
+                prefs = [
+                    'models/gemini-1.5-flash', 
+                    'models/gemini-1.5-flash-8b', 
+                    'models/gemini-1.5-flash-latest', 
+                    'models/gemini-pro'
+                ]
                 for p in prefs:
                     if p in available_models:
                         model_to_use = p
@@ -372,9 +377,8 @@ def chat_proxy():
         except Exception as list_err:
             print(f"[AUTO-DETECT] List failed: {str(list_err)}")
         
-        # Execute chat with multiple retry variants for the ID
-        # Some keys want 'models/xxx', some want just 'xxx'
-        variants = [model_to_use, model_to_use.replace('models/', ''), 'gemini-1.5-flash']
+        # Execute chat with multiple retry variants for the ID and fallbacks for High Demand
+        variants = [model_to_use, 'models/gemini-1.5-flash-8b', 'gemini-1.5-flash']
         last_gen_err = None
         for v in variants:
             try:
@@ -386,7 +390,12 @@ def chat_proxy():
                 return jsonify({"response": response.text})
             except Exception as e:
                 last_gen_err = e
-                if "404" not in str(e): break # If not 404, might be a real issue like quota
+                # Now we ALSO continue if it's high demand (503) or 404
+                error_str = str(e).lower()
+                if "404" in error_str or "503" in error_str or "high demand" in error_str:
+                    print(f"[DEBUG] Variant {v} busy or not found, trying next...")
+                    continue
+                break # Real error like invalid key or quota
         
         raise last_gen_err
             
