@@ -238,7 +238,7 @@ const AQI_MAPPING = {
     }
 };
 
-const API_BASE_URL = "https://aqi-1-6783.onrender.com";
+const API_BASE_URL = window.location.origin;
 
 const cityInput = document.getElementById('cityInput');
 const searchBtn = document.getElementById('searchBtn');

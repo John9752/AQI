@@ -353,7 +353,9 @@ def chat_proxy():
             raise e
             
     except Exception as e:
-        return jsonify({"error": f"AI Assistant currently busy. Please try again in 30 seconds."}), 503
+        error_msg = str(e)
+        print(f"[Chat Error] {error_msg}")
+        return jsonify({"error": f"AI Assistant is currently busy. {error_msg}. Please try again."}), 503
 
 @app.route('/')
 def index_root(): return render_template('login.html')

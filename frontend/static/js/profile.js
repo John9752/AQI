@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     
-    const API_BASE_URL = "https://aqi-1-6783.onrender.com";
+    const API_BASE_URL = window.location.origin;
 
     // Bind UI elements
     const profileName = document.getElementById('profileName');
@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const alertContainer = document.getElementById('alertContainer');
 
     // Make sure we have the backend base link via the auth.js global variables
-    //const AUTH_API_BASE_URL = "https://aqi-1-6783.onrender.com";
+    //const AUTH_API_BASE_URL = window.location.origin;
     let userEmailAddress = "";
 
     function showAlert(message, isSuccess = false) {
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchUserPreferences(userEmailAddress);
         } else {
             // Not logged in -> boot back to Auth!
-            const base_url = "https://aqi-1-6783.onrender.com";
+            const base_url = window.location.origin;
             window.location.href = "/login.html";
         }
     });
