@@ -341,7 +341,16 @@ def chat_proxy():
     last_error = ""
 
     try:
-        client = genai.Client(api_key=api_key)
+        # Force stable v1 API version
+        client = genai.Client(api_key=api_key, http_options={'api_version': 'v1'})
+        
+        # Debug: Print available models to Render logs to help troubleshoot
+        try:
+            print(f"[DEBUG] Checking available models for this key...")
+            models = [m.name for m in client.models.list()]
+            print(f"[DEBUG] This key has access to: {models}")
+        except Exception as e:
+            print(f"[DEBUG] Could not list models: {str(e)}")
         
         for model_name in models_to_try:
             try:
