@@ -345,45 +345,50 @@ def chat_proxy():
         client = genai.Client(api_key=api_key, http_options={'api_version': 'v1'})
         
         # AUTO-DETECT WORKING MODELS
-        model_to_use = 'gemini-1.5-flash' # Standard fallback
+        model_to_use = 'gemini-1.5-flash' 
         try:
             print(f"[AUTO-DETECT] Scanning for available models...")
-            # Fetch all models that support generating content
             available_models = []
             for m in client.models.list():
-                if 'generateContent' in m.supported_methods:
-                    available_models.append(m.name)
+                # Correct attribute for google-genai SDK
+                name = getattr(m, 'name', None)
+                if name:
+                    available_models.append(name)
             
             print(f"[AUTO-DETECT] Found {len(available_models)} models: {available_models}")
             
             if available_models:
-                # Try to pick our preferred ones first, otherwise take the first available
-                preferred = ['models/gemini-1.5-flash', 'models/gemini-pro', 'models/gemini-1.0-pro']
-                found_preferred = False
-                for p in preferred:
+                # Preferred order
+                prefs = ['models/gemini-1.5-flash', 'models/gemini-1.5-flash-latest', 'models/gemini-1.0-pro', 'models/gemini-pro']
+                for p in prefs:
                     if p in available_models:
                         model_to_use = p
-                        found_preferred = True
                         break
-                if not found_preferred:
+                else:
+                    # If no preference found, take the first one that looks like a text model
                     model_to_use = available_models[0]
                 
-                print(f"[AUTO-DETECT] Selected model to use: {model_to_use}")
-            else:
-                print("[AUTO-DETECT] WARNING: No generative models found for this key!")
+                print(f"[AUTO-DETECT] Selected model: {model_to_use}")
         except Exception as list_err:
-            print(f"[AUTO-DETECT] Could not list models: {str(list_err)}")
+            print(f"[AUTO-DETECT] List failed: {str(list_err)}")
         
-        # Execute the chat with the selected (or fallback) model
-        try:
-            response = client.models.generate_content(
-                model=model_to_use, 
-                contents=f"{system_prompt}\n\nUser Question: {user_query}"
-            )
-            return jsonify({"response": response.text})
-        except Exception as gen_err:
-            print(f"[ERROR] Generation failed for {model_to_use}: {str(gen_err)}")
-            return jsonify({"error": f"AI Assistant unavailable. {str(gen_err)}. Please verify your Gemini API key in AI Studio."}), 503
+        # Execute chat with multiple retry variants for the ID
+        # Some keys want 'models/xxx', some want just 'xxx'
+        variants = [model_to_use, model_to_use.replace('models/', ''), 'gemini-1.5-flash']
+        last_gen_err = None
+        for v in variants:
+            try:
+                print(f"[DEBUG] Attempting generation with model variant: {v}")
+                response = client.models.generate_content(
+                    model=v, 
+                    contents=f"{system_prompt}\n\nUser Question: {user_query}"
+                )
+                return jsonify({"response": response.text})
+            except Exception as e:
+                last_gen_err = e
+                if "404" not in str(e): break # If not 404, might be a real issue like quota
+        
+        raise last_gen_err
             
     except Exception as e:
         error_msg = str(e)
