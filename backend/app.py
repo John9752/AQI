@@ -344,29 +344,46 @@ def chat_proxy():
         # Force stable v1 API version
         client = genai.Client(api_key=api_key, http_options={'api_version': 'v1'})
         
-        # Debug: Print available models to Render logs to help troubleshoot
+        # AUTO-DETECT WORKING MODELS
+        model_to_use = 'gemini-1.5-flash' # Standard fallback
         try:
-            print(f"[DEBUG] Checking available models for this key...")
-            models = [m.name for m in client.models.list()]
-            print(f"[DEBUG] This key has access to: {models}")
-        except Exception as e:
-            print(f"[DEBUG] Could not list models: {str(e)}")
+            print(f"[AUTO-DETECT] Scanning for available models...")
+            # Fetch all models that support generating content
+            available_models = []
+            for m in client.models.list():
+                if 'generateContent' in m.supported_methods:
+                    available_models.append(m.name)
+            
+            print(f"[AUTO-DETECT] Found {len(available_models)} models: {available_models}")
+            
+            if available_models:
+                # Try to pick our preferred ones first, otherwise take the first available
+                preferred = ['models/gemini-1.5-flash', 'models/gemini-pro', 'models/gemini-1.0-pro']
+                found_preferred = False
+                for p in preferred:
+                    if p in available_models:
+                        model_to_use = p
+                        found_preferred = True
+                        break
+                if not found_preferred:
+                    model_to_use = available_models[0]
+                
+                print(f"[AUTO-DETECT] Selected model to use: {model_to_use}")
+            else:
+                print("[AUTO-DETECT] WARNING: No generative models found for this key!")
+        except Exception as list_err:
+            print(f"[AUTO-DETECT] Could not list models: {str(list_err)}")
         
-        for model_name in models_to_try:
-            try:
-                response = client.models.generate_content(
-                    model=model_name, 
-                    contents=f"{system_prompt}\n\nUser Question: {user_query}"
-                )
-                return jsonify({"response": response.text})
-            except Exception as e:
-                last_error = str(e)
-                # If it's a 404, try the next model. Otherwise (like quota), report it.
-                if "404" not in last_error:
-                    break
-                continue
-        
-        return jsonify({"error": f"AI Assistant currently unavailable. {last_error}. Please check your API key permissions."}), 503
+        # Execute the chat with the selected (or fallback) model
+        try:
+            response = client.models.generate_content(
+                model=model_to_use, 
+                contents=f"{system_prompt}\n\nUser Question: {user_query}"
+            )
+            return jsonify({"response": response.text})
+        except Exception as gen_err:
+            print(f"[ERROR] Generation failed for {model_to_use}: {str(gen_err)}")
+            return jsonify({"error": f"AI Assistant unavailable. {str(gen_err)}. Please verify your Gemini API key in AI Studio."}), 503
             
     except Exception as e:
         error_msg = str(e)
