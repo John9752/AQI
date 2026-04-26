@@ -3,7 +3,9 @@
     // CHAT CONFIGURATION
     // ==========================================
     // Automatically use the same origin as the dashboard
-    const base_url = window.location.origin;
+    const base_url = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+        ? window.location.origin 
+        : "https://aqi-1-6783.onrender.com";
 
     const floatingChatBtn = document.getElementById('floatingChatBtn');
     const chatWidget = document.getElementById('chatWidget');

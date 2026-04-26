@@ -12,7 +12,7 @@ import hashlib
 import random
 from datetime import datetime
 from pathlib import Path
-import google.generativeai as genai
+from google import genai
 
 # Load environment variables
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -337,18 +337,22 @@ def chat_proxy():
     )
     
     try:
-        genai.configure(api_key=api_key)
+        client = genai.Client(api_key=api_key)
         
         # Try Flash first
-        model = genai.GenerativeModel('gemini-1.5-flash')
         try:
-            response = model.generate_content(f"{system_prompt}\n\nUser Question: {user_query}")
+            response = client.models.generate_content(
+                model='gemini-1.5-flash', 
+                contents=f"{system_prompt}\n\nUser Question: {user_query}"
+            )
             return jsonify({"response": response.text})
         except Exception as e:
             # If high demand, try Flash 8B (more available)
             if "high demand" in str(e).lower() or "429" in str(e):
-                model_8b = genai.GenerativeModel('gemini-1.5-flash-8b')
-                response = model_8b.generate_content(f"{system_prompt}\n\nUser Question: {user_query}")
+                response = client.models.generate_content(
+                    model='gemini-1.5-flash-8b', 
+                    contents=f"{system_prompt}\n\nUser Question: {user_query}"
+                )
                 return jsonify({"response": response.text})
             raise e
             

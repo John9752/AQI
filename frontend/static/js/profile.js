@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
     
-    const API_BASE_URL = window.location.origin;
+    const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+        ? window.location.origin 
+        : "https://aqi-1-6783.onrender.com";
 
     // Bind UI elements
     const profileName = document.getElementById('profileName');
@@ -36,7 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchUserPreferences(userEmailAddress);
         } else {
             // Not logged in -> boot back to Auth!
-            const base_url = window.location.origin;
+            const base_url = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+                ? window.location.origin 
+                : "https://aqi-1-6783.onrender.com";
             window.location.href = "/login.html";
         }
     });
