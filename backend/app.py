@@ -336,30 +336,33 @@ def chat_proxy():
         "Keep responses professional, concise, and focused on safety."
     )
     
+    # Try multiple models in case of 404/Not Found or versioning issues
+    models_to_try = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-pro', 'gemini-1.0-pro']
+    last_error = ""
+
     try:
         client = genai.Client(api_key=api_key)
         
-        # Try Flash first
-        try:
-            response = client.models.generate_content(
-                model='gemini-1.5-flash', 
-                contents=f"{system_prompt}\n\nUser Question: {user_query}"
-            )
-            return jsonify({"response": response.text})
-        except Exception as e:
-            # If high demand, try Flash 8B (more available)
-            if "high demand" in str(e).lower() or "429" in str(e):
+        for model_name in models_to_try:
+            try:
                 response = client.models.generate_content(
-                    model='gemini-1.5-flash-8b', 
+                    model=model_name, 
                     contents=f"{system_prompt}\n\nUser Question: {user_query}"
                 )
                 return jsonify({"response": response.text})
-            raise e
+            except Exception as e:
+                last_error = str(e)
+                # If it's a 404, try the next model. Otherwise (like quota), report it.
+                if "404" not in last_error:
+                    break
+                continue
+        
+        return jsonify({"error": f"AI Assistant currently unavailable. {last_error}. Please check your API key permissions."}), 503
             
     except Exception as e:
         error_msg = str(e)
-        print(f"[Chat Error] {error_msg}")
-        return jsonify({"error": f"AI Assistant is currently busy. {error_msg}. Please try again."}), 503
+        print(f"[Chat Global Error] {error_msg}")
+        return jsonify({"error": f"AI Assistant initialization failed. {error_msg}. Please try again."}), 503
 
 @app.route('/')
 def index_root(): return render_template('login.html')
